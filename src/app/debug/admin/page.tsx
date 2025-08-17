@@ -151,7 +151,7 @@ export default function AdminDebugPage() {
                 <h3 className="font-semibold text-yellow-800 mb-2">💡 문제 해결 방법</h3>
                 <div className="text-yellow-700 space-y-2">
                   <p><strong>1. 환경변수 확인:</strong> NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY가 설정되어 있는지 확인</p>
-                  <p><strong>2. 계정 설정:</strong> 위의 "관리자 계정 설정" 버튼을 클릭하여 계정 생성</p>
+                  <p><strong>2. 계정 설정:</strong> 위의 &quot;관리자 계정 설정&quot; 버튼을 클릭하여 계정 생성</p>
                   <p><strong>3. 로그인 시도:</strong> http://localhost:3000/auth/login 에서 위 계정 정보로 로그인</p>
                   <p><strong>4. 관리자 페이지:</strong> 성공하면 http://localhost:3000/admin/dashboard 로 이동</p>
                 </div>
