@@ -1,0 +1,5 @@
+[33m1af6f28[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m Fix: Next.js 15 Suspense boundary 오류 해결 - useSearchParams를 Suspense로 감싸기
+[33m8e4f22e[m[33m ([m[1;31morigin/main[m[33m)[m Fix: Vercel Prisma 빌드 오류 해결 - prisma generate를 빌드 스크립트에 추가
+[33m3293f05[m Fix: 사용자 요청에 따라 .eslintrc.json 형식으로 ESLint 설정 적용
+[33mcf9c5ee[m Fix: ESLint 최종 해결 - .eslintrc.js 사용 및 Next.js 권장 설정 적용
+[33m654dbee[m Fix: ESLint 핵 옵션 - webpack에서 ESLintWebpackPlugin 완전 제거
