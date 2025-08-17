@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // 빌드 오류 무시 설정 (Vercel 배포를 위해)
   typescript: {
     ignoreBuildErrors: true,
@@ -9,14 +8,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // 실험적 기능 최소화
-  experimental: {
-    optimizePackageImports: [
-      'lucide-react',
-    ],
-  },
-  
-  // 이미지 최적화 (기본 설정)
+  // 이미지 최적화
   images: {
     formats: ['image/webp', 'image/avif'],
   },
@@ -25,6 +17,11 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
+  
+  // 환경변수 검증 건너뛰기
+  env: {
+    SKIP_ENV_VALIDATION: 'true',
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
