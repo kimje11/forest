@@ -38,14 +38,16 @@ export default function Home() {
             탐구의 숲에서 지식의 나무를 키워보세요.
           </p>
           <div className="flex gap-4 justify-center">
-            <Link href="/auth/register">
+            <Link href="/auth/login">
               <Button size="lg" className="px-8">
-                지금 시작하기
+                로그인
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="px-8">
-              더 알아보기
-            </Button>
+            <Link href="/auth/register">
+              <Button size="lg" variant="outline" className="px-8">
+                회원가입
+              </Button>
+            </Link>
           </div>
         </section>
 
@@ -202,23 +204,25 @@ export default function Home() {
           <Card className="max-w-4xl mx-auto p-12 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
             <CardHeader>
               <CardTitle className="text-3xl mb-4 text-white">
-                지금 탐구의 숲에서 시작해보세요
+                탐구의 숲에 오신 것을 환영합니다
               </CardTitle>
               <CardDescription className="text-blue-100 text-lg">
-                무료로 가입하고 체계적인 탐구 학습을 경험해보세요.
+                체계적인 탐구 학습을 통해 학생들의 성장을 함께하세요.
                 학생과 교사 모두를 위한 최고의 도구가 준비되어 있습니다.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4 justify-center mt-8">
-                <Link href="/auth/register">
+                <Link href="/auth/login">
                   <Button size="lg" variant="secondary" className="px-8">
-                    무료로 시작하기
+                    로그인
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="px-8 text-white border-white hover:bg-white hover:text-blue-600">
-                  데모 보기
-                </Button>
+                <Link href="/auth/register">
+                  <Button size="lg" variant="outline" className="px-8 text-white border-white hover:bg-white hover:text-blue-600">
+                    회원가입
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
