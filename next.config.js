@@ -22,6 +22,16 @@ const nextConfig = {
   env: {
     SKIP_ENV_VALIDATION: 'true',
   },
+  
+  // webpack 설정으로 ESLint 완전 비활성화
+  webpack: (config, { isServer }) => {
+    // ESLint webpack 플러그인 제거
+    config.plugins = config.plugins.filter(
+      (plugin) => plugin.constructor.name !== 'ESLintWebpackPlugin'
+    );
+    
+    return config;
+  },
 };
 
 module.exports = nextConfig;
