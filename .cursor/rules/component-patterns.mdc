@@ -1,0 +1,165 @@
+---
+globs: *.tsx,*.jsx
+description: React 컴포넌트 패턴 및 베스트 프랙티스
+---
+
+# React 컴포넌트 패턴
+
+React 19와 Next.js 15에서 사용하는 컴포넌트 패턴과 베스트 프랙티스입니다.
+
+## 함수형 컴포넌트 패턴
+
+```typescript
+// ✅ 기본 컴포넌트 구조
+interface ComponentProps {
+  title: string;
+  children?: React.ReactNode;
+  className?: string;
+}
+
+export default function Component({ 
+  title, 
+  children, 
+  className 
+}: ComponentProps) {
+  return (
+    <div className={className}>
+      <h1>{title}</h1>
+      {children}
+    </div>
+  );
+}
+```
+
+## Props 타입 정의
+
+```typescript
+// ✅ 구체적인 Props 인터페이스
+interface ButtonProps {
+  variant: "primary" | "secondary" | "outline";
+  size: "sm" | "md" | "lg";
+  disabled?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+}
+
+// ✅ 조건부 Props
+type ConditionalProps = 
+  | { href: string; onClick?: never; }
+  | { href?: never; onClick: () => void; };
+
+type LinkButtonProps = ButtonProps & ConditionalProps;
+```
+
+## 컴포넌트 파일 구조
+
+```typescript
+// ComponentName.tsx
+import React from "react";
+import type { ComponentProps } from "./types";
+import "./ComponentName.module.css"; // 필요한 경우만
+
+// 타입 정의
+interface Props extends ComponentProps {
+  // 추가 props
+}
+
+// 컴포넌트 정의
+export default function ComponentName(props: Props) {
+  // 로직
+  return (
+    // JSX
+  );
+}
+
+// Named export (필요한 경우)
+export { ComponentName };
+```
+
+## 이벤트 핸들링
+
+```typescript
+// ✅ 타입 안전한 이벤트 핸들러
+const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  event.preventDefault();
+  // 핸들링 로직
+};
+
+const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  setValue(event.target.value);
+};
+```
+
+## 조건부 렌더링
+
+```typescript
+// ✅ 조건부 렌더링 패턴
+{isLoading && <LoadingSpinner />}
+{error && <ErrorMessage error={error} />}
+{data ? <DataDisplay data={data} /> : <EmptyState />}
+
+// ✅ 복잡한 조건부 렌더링
+const renderContent = () => {
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+  if (!data?.length) return <EmptyState />;
+  return <DataList data={data} />;
+};
+```
+
+## 성능 최적화
+
+```typescript
+// ✅ React.memo 사용
+const MemoizedComponent = React.memo(function Component({ data }: Props) {
+  return <div>{data}</div>;
+});
+
+// ✅ useCallback 사용
+const handleCallback = useCallback((id: string) => {
+  // 콜백 로직
+}, [dependency]);
+```
+
+## 접근성 (a11y)
+
+```typescript
+// ✅ 접근성 속성 포함
+<button
+  aria-label="메뉴 열기"
+  aria-expanded={isOpen}
+  aria-controls="navigation-menu"
+  onClick={toggleMenu}
+>
+  <MenuIcon />
+</button>
+
+<img 
+  src="/image.jpg" 
+  alt="의미 있는 설명" 
+  role="img"
+/>
+```
+
+## 컴포넌트 조합
+
+```typescript
+// ✅ Compound Component 패턴
+export function Card({ children, className }: CardProps) {
+  return <div className={`card ${className}`}>{children}</div>;
+}
+
+Card.Header = function CardHeader({ children }: HeaderProps) {
+  return <header className="card-header">{children}</header>;
+};
+
+Card.Body = function CardBody({ children }: BodyProps) {
+  return <main className="card-body">{children}</main>;
+};
+
+// 사용법
+<Card>
+  <Card.Header>제목</Card.Header>
+  <Card.Body>내용</Card.Body>
+</Card>
+```

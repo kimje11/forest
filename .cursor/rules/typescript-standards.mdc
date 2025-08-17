@@ -1,0 +1,60 @@
+---
+globs: *.ts,*.tsx
+description: TypeScript 코딩 표준 및 베스트 프랙티스
+---
+
+# TypeScript 코딩 표준
+
+이 프로젝트의 TypeScript 코딩 표준과 베스트 프랙티스입니다.
+
+## 코딩 스타일
+
+- **세미콜론**: 항상 사용
+- **따옴표**: 문자열에는 double quotes (`"`) 사용
+- **인덴테이션**: 2 스페이스 사용
+- **후행 쉼표**: 멀티라인 객체/배열에서 사용
+
+## 타입 정의
+
+```typescript
+// ✅ 올바른 예시
+interface Props {
+  title: string;
+  count: number;
+  isVisible?: boolean;
+}
+
+// ✅ 함수 컴포넌트 타입
+const Component: React.FC<Props> = ({ title, count }) => {
+  return <div>{title}: {count}</div>;
+};
+```
+
+## Import 순서
+
+1. React 관련 imports
+2. Next.js 관련 imports  
+3. 외부 라이브러리 imports
+4. 상대 경로 imports (컴포넌트, 유틸리티 등)
+
+```typescript
+import React from "react";
+import Image from "next/image";
+import type { Metadata } from "next";
+import { clsx } from "clsx";
+import "./globals.css";
+```
+
+## 파일 명명 규칙
+
+- **컴포넌트**: PascalCase (예: `Button.tsx`, `UserProfile.tsx`)
+- **페이지**: kebab-case 또는 camelCase (예: `page.tsx`, `user-profile/page.tsx`)
+- **유틸리티**: camelCase (예: `utils.ts`, `formatDate.ts`)
+- **타입 정의**: PascalCase (예: `types.ts`, `UserTypes.ts`)
+
+## Strict Mode 준수
+
+현재 설정된 strict mode를 준수하여:
+- 모든 변수에 명시적 타입 지정
+- `any` 타입 사용 금지
+- null check 철저히 수행

@@ -1,0 +1,156 @@
+---
+globs: *.ts,*.tsx
+description: 성능 최적화 및 모니터링 가이드라인
+---
+
+# 성능 최적화 가이드라인
+
+Next.js 애플리케이션의 성능 최적화를 위한 가이드라인입니다.
+
+## 번들 크기 최적화
+
+```typescript
+// ✅ 동적 임포트 사용
+const HeavyComponent = dynamic(() => import("@/components/HeavyComponent"), {
+  loading: () => <p>로딩 중...</p>,
+});
+
+// ✅ 트리 쉐이킹을 위한 named import
+import { specific } from "library";
+// ❌ 전체 라이브러리 import 금지
+import * as library from "library";
+```
+
+## 이미지 최적화
+
+```typescript
+// ✅ Next.js Image 컴포넌트 사용
+import Image from "next/image";
+
+<Image
+  src="/hero.jpg"
+  alt="히어로 이미지"
+  width={1200}
+  height={600}
+  priority={true} // Above the fold 이미지에만 사용
+  placeholder="blur"
+  blurDataURL="data:image/jpeg;base64,..."
+/>
+
+// ✅ 반응형 이미지
+<Image
+  src="/image.jpg"
+  alt="반응형 이미지"
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+  fill
+/>
+```
+
+## 폰트 최적화
+
+```typescript
+// ✅ 로컬 폰트 최적화 (layout.tsx에서)
+import { Geist, Geist_Mono } from "next/font/google";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+  display: "swap", // 폰트 로딩 최적화
+});
+```
+
+## 메모이제이션
+
+```typescript
+// ✅ React.memo 적절한 사용
+const ExpensiveComponent = React.memo(function ExpensiveComponent({ 
+  data, 
+  onUpdate 
+}: Props) {
+  // 비싼 연산 컴포넌트
+}, (prevProps, nextProps) => {
+  // 커스텀 비교 함수 (필요한 경우만)
+  return prevProps.data.id === nextProps.data.id;
+});
+
+// ✅ useMemo 사용
+const expensiveValue = useMemo(() => {
+  return data.reduce((acc, item) => acc + item.value, 0);
+}, [data]);
+
+// ✅ useCallback 사용
+const handleClick = useCallback((id: string) => {
+  onUpdate(id);
+}, [onUpdate]);
+```
+
+## 코드 분할
+
+```typescript
+// ✅ 라우트 레벨 코드 분할
+const AdminPanel = dynamic(() => import("@/components/AdminPanel"), {
+  ssr: false, // 클라이언트에서만 로드
+});
+
+// ✅ 조건부 로딩
+const FeatureComponent = dynamic(
+  () => import("@/components/FeatureComponent"),
+  { ssr: false }
+);
+
+function App() {
+  return (
+    <div>
+      {showFeature && <FeatureComponent />}
+    </div>
+  );
+}
+```
+
+## Web Vitals 모니터링
+
+```typescript
+// ✅ 성능 측정 함수 (필요시 추가)
+export function reportWebVitals(metric: NextWebVitalsMetric) {
+  console.log(metric);
+  
+  // 분석 도구로 전송
+  switch (metric.name) {
+    case "CLS":
+    case "FID":
+    case "FCP":
+    case "LCP":
+    case "TTFB":
+      // 메트릭 전송 로직
+      break;
+  }
+}
+```
+
+## 서버 컴포넌트 활용
+
+```typescript
+// ✅ 서버 컴포넌트에서 데이터 fetching
+async function ServerComponent() {
+  const data = await fetch("https://api.example.com/data");
+  
+  return (
+    <div>
+      {/* 서버에서 렌더링된 내용 */}
+    </div>
+  );
+}
+
+// ✅ 클라이언트 컴포넌트는 필요한 경우만
+"use client";
+
+function InteractiveComponent() {
+  const [state, setState] = useState();
+  
+  return (
+    <button onClick={() => setState(!state)}>
+      Toggle
+    </button>
+  );
+}
+```

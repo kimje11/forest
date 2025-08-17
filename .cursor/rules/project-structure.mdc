@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+description: Next.js 프로젝트 구조 및 파일 위치 가이드
+---
+
+# 프로젝트 구조 가이드
+
+이 프로젝트는 Next.js 15 App Router를 사용하는 모던 웹 애플리케이션입니다.
+
+## 주요 디렉토리 구조
+
+- **`src/app/`**: Next.js App Router의 메인 디렉토리
+  - [page.tsx](mdc:src/app/page.tsx): 홈페이지 컴포넌트
+  - [layout.tsx](mdc:src/app/layout.tsx): 루트 레이아웃 컴포넌트
+  - [globals.css](mdc:src/app/globals.css): 전역 CSS 파일
+
+- **`public/`**: 정적 파일들 (이미지, 아이콘 등)
+
+- **설정 파일들**:
+  - [package.json](mdc:package.json): 프로젝트 의존성 및 스크립트
+  - [tsconfig.json](mdc:tsconfig.json): TypeScript 설정
+  - [next.config.ts](mdc:next.config.ts): Next.js 설정
+  - [eslint.config.mjs](mdc:eslint.config.mjs): ESLint 설정
+
+## 기술 스택
+
+- **프레임워크**: Next.js 15 (App Router)
+- **언어**: TypeScript
+- **스타일링**: Tailwind CSS v4
+- **폰트**: Geist Sans & Geist Mono
+- **린팅**: ESLint
+
+## 경로 별칭
+
+TypeScript 설정에서 `@/*`가 `./src/*`로 매핑되어 있어 절대 경로 import가 가능합니다.

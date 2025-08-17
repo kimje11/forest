@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER  
+  ADMIN
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  SUBMITTED
+}
+
+enum ComponentType {
+  TEXT
+  TEXTAREA
+  FILE_UPLOAD
+  MULTIPLE_CHOICE
+  CHECKBOX
+  AI_TOPIC_HELPER
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+// 사용자 테이블
+model User {
+  id        String        @id // Supabase Auth UUID 사용
+  email     String        @unique
+  name      String
+  password  String        // Supabase Auth 사용 시 빈 문자열
+  role      UserRole
+  status    AccountStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // 관계
+  teachingClasses  Class[]           @relation("TeacherClasses")
+  enrolledClasses  ClassEnrollment[]
+  projects         Project[]
+  templates        Template[]
+  feedbacks        Feedback[]
+  inputHistories   InputHistory[]
+  auditLogs        AuditLog[]
+  classActivities  ClassActivity[]   @relation("TeacherActivities")
+
+  @@map("users")
+}
+
+// 클래스 테이블
+model Class {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  classCode   String    @unique // 6자리 참여 코드
+  teacherId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // 관계
+  teacher     User                @relation("TeacherClasses", fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments ClassEnrollment[]
+  projects    Project[]
+  activities  ClassActivity[]
+
+  @@map("classes")
+}
+
+// 클래스 등록 테이블
+model ClassEnrollment {
+  id        String   @id @default(cuid())
+  studentId String
+  classId   String
+  createdAt DateTime @default(now())
+
+  // 관계
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, classId])
+  @@map("class_enrollments")
+}
+
+// 클래스 활동 (교사가 클래스에 할당한 탐구 활동)
+model ClassActivity {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  classId     String
+  templateId  String
+  teacherId   String
+  isActive    Boolean   @default(true)
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // 관계
+  class    Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  teacher  User     @relation("TeacherActivities", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("class_activities")
+}
+
+// 탐구 템플릿 테이블
+model Template {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  teacherId   String
+  isDefault   Boolean  @default(false) // 기본 제공 템플릿 여부
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 관계
+  teacher    User              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  steps      TemplateStep[]
+  projects   Project[]
+  activities ClassActivity[]
+
+  @@map("templates")
+}
+
+// 템플릿 단계 테이블
+model TemplateStep {
+  id          String @id @default(cuid())
+  templateId  String
+  title       String
+  description String?
+  order       Int
+  isRequired  Boolean @default(false)
+
+  // 관계
+  template   Template              @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  components TemplateComponent[]
+  inputs     ProjectInput[]
+  feedbacks  Feedback[]
+
+  @@map("template_steps")
+}
+
+// 템플릿 컴포넌트 테이블 (각 단계 내의 입력 요소들)
+model TemplateComponent {
+  id           String        @id @default(cuid())
+  stepId       String
+  type         ComponentType
+  label        String
+  placeholder  String?
+  required     Boolean       @default(false)
+  order        Int
+  options      String?       // JSON 형태로 저장 (객관식 선택지 등)
+
+  // 관계
+  step   TemplateStep   @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  inputs ProjectInput[]
+
+  @@map("template_components")
+}
+
+// 탐구 프로젝트 테이블
+model Project {
+  id         String        @id @default(cuid())
+  title      String?
+  studentId  String
+  classId    String
+  templateId String
+  status     ProjectStatus @default(DRAFT)
+  grade      String?       // 최종 평가 등급
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  // 관계
+  student        User           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class          Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  template       Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  inputs         ProjectInput[]
+  feedbacks      Feedback[]
+  inputHistories InputHistory[]
+
+  @@map("projects")
+}
+
+// 프로젝트 입력 데이터 테이블
+model ProjectInput {
+  id          String   @id @default(cuid())
+  projectId   String
+  stepId      String
+  componentId String
+  value       String? // JSON 또는 텍스트 형태로 저장
+  fileUrl     String? // 파일 업로드의 경우 파일 경로
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 관계
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  step      TemplateStep      @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  component TemplateComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, stepId, componentId])
+  @@map("project_inputs")
+}
+
+// 입력 이력 테이블 (자동 저장 및 변경 이력)
+model InputHistory {
+  id          String   @id @default(cuid())
+  projectId   String
+  stepId      String
+  componentId String
+  value       String?
+  userId      String   // 수정한 사용자 (학생)
+  createdAt   DateTime @default(now())
+
+  // 관계
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("input_history")
+}
+
+// 피드백 테이블
+model Feedback {
+  id        String   @id @default(cuid())
+  projectId String
+  stepId    String?  // 특정 단계에 대한 피드백 (null이면 전체 프로젝트 피드백)
+  teacherId String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 관계
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teacher User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  step    TemplateStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
+
+  @@map("feedbacks")
+}
+
+// 관리자 활동 로그 테이블
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String   // 수행한 작업 (예: "USER_SUSPENDED", "TEMPLATE_MODIFIED")
+  target    String?  // 대상 (예: 사용자 ID, 템플릿 ID)
+  details   String?  // 상세 정보 (JSON 형태)
+  createdAt DateTime @default(now())
+
+  // 관계
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+// 주제 카드 테이블 (AI 주제 추천 시 사용)
+model TopicCard {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  subject     String   // 교과목
+  category    String   // 관심 유형
+  keywords    String[] // 관련 키워드 (PostgreSQL 배열)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("topic_cards")
+}

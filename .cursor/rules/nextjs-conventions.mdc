@@ -1,0 +1,82 @@
+---
+globs: src/app/**/*
+description: Next.js App Router 컨벤션 및 베스트 프랙티스
+---
+
+# Next.js App Router 컨벤션
+
+Next.js 15 App Router를 사용하는 이 프로젝트의 컨벤션과 베스트 프랙티스입니다.
+
+## 파일 기반 라우팅
+
+App Router는 `src/app` 디렉토리 내의 폴더 구조로 라우팅을 결정합니다.
+
+### 특수 파일들
+
+- **`page.tsx`**: 라우트의 UI를 정의하는 페이지 컴포넌트
+- **`layout.tsx`**: 여러 페이지에서 공유되는 레이아웃
+- **`loading.tsx`**: 로딩 UI
+- **`error.tsx`**: 에러 UI
+- **`not-found.tsx`**: 404 페이지
+
+## 메타데이터 관리
+
+```typescript
+// ✅ 정적 메타데이터
+export const metadata: Metadata = {
+  title: "페이지 제목",
+  description: "페이지 설명",
+};
+
+// ✅ 동적 메타데이터
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return {
+    title: `동적 제목 - ${params.id}`,
+  };
+}
+```
+
+## 폰트 최적화
+
+[layout.tsx](mdc:src/app/layout.tsx)에서 처럼 Google Fonts를 사용할 때:
+
+```typescript
+import { Geist, Geist_Mono } from "next/font/google";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+```
+
+## 이미지 최적화
+
+Next.js Image 컴포넌트를 항상 사용하세요:
+
+```typescript
+import Image from "next/image";
+
+// ✅ 올바른 사용법
+<Image
+  src="/image.jpg"
+  alt="설명적인 alt 텍스트"
+  width={500}
+  height={300}
+  priority // 중요한 이미지에만 사용
+/>
+```
+
+## Server/Client Components
+
+- **기본적으로 Server Components 사용**
+- 상호작용이 필요한 경우에만 `"use client"` 지시어 사용
+- Server Components에서는 브라우저 API 사용 불가
+
+## 절대 경로 Import
+
+`@/` 별칭을 사용하여 src 디렉토리부터의 절대 경로로 import하세요:
+
+```typescript
+import { Button } from "@/components/ui/Button";
+import { utils } from "@/lib/utils";
+```
