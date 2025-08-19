@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuthWithDemo } from "@/lib/auth";
 import { z } from "zod";
 
 const createFeedbackSchema = z.object({
@@ -15,8 +15,8 @@ export async function POST(
   try {
     const { id: projectId } = await params;
     
-    // Supabase Auth를 통한 인증 및 권한 확인
-    const user = await requireAuth(["TEACHER"]);
+    // 데모 계정 지원 인증 및 권한 확인
+    const user = await requireAuthWithDemo(request, ["TEACHER"]);
 
     if (!user) {
       return NextResponse.json(
@@ -102,8 +102,8 @@ export async function GET(
   try {
     const { id: projectId } = await params;
     
-    // Supabase Auth를 통한 인증
-    const user = await requireAuth();
+    // 데모 계정 지원 인증
+    const user = await requireAuthWithDemo(request);
 
     if (!user) {
       return NextResponse.json(
