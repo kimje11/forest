@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuthWithDemo } from "@/lib/auth";
 import { z } from "zod";
 
 const joinClassSchema = z.object({
-  classCode: z.string().min(6, "참여 코드는 6자리여야 합니다.").max(6),
+  classCode: z.string().min(5, "참여 코드는 5자리 이상이어야 합니다.").max(6),
 });
 
 export async function POST(request: NextRequest) {
   try {
-    // Supabase Auth를 통한 인증 및 권한 확인
-    const user = await requireAuth(["STUDENT"]);
+    // 데모 계정 지원 인증 및 권한 확인
+    const user = await requireAuthWithDemo(request, ["STUDENT"]);
 
     if (!user) {
       return NextResponse.json(
