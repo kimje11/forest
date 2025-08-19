@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 성공적인 로그인
-    return NextResponse.json({
+    // 성공적인 로그인 - 쿠키 설정
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -66,6 +66,22 @@ export async function POST(request: NextRequest) {
         role: user.role
       }
     });
+
+    // 데모 사용자 정보를 쿠키에 저장
+    response.cookies.set('demoUser', JSON.stringify({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    }), {
+      path: '/',
+      httpOnly: false, // 클라이언트에서 접근 가능하도록
+      secure: false,   // 개발 환경에서는 false
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7일
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Demo login error:', error);

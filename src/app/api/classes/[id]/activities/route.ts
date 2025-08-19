@@ -143,8 +143,8 @@ export async function POST(
   try {
     const { id: classId } = await params;
     
-    // Supabase Auth를 통한 인증 및 권한 확인
-    const user = await requireAuth(["TEACHER"]);
+    // 데모 계정 지원 인증 및 권한 확인
+    const user = await requireAuthWithDemo(request, ["TEACHER"]);
 
     if (!user) {
       return NextResponse.json(
