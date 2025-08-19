@@ -243,12 +243,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
       case "TEXTAREA":
         return (
-          <MathEditor
+          <textarea
             value={inputValue}
-            onChange={isSubmitted ? () => {} : (value) => handleInputChange(step.id, component.id, value)}
-            placeholder={component.placeholder || "수학 식을 포함한 텍스트를 입력하세요..."}
-            disabled={isSubmitted}
-            className={isSubmitted ? "opacity-60" : ""}
+            onChange={isSubmitted ? undefined : (e) => handleInputChange(step.id, component.id, e.target.value)}
+            placeholder={component.placeholder || "여러 줄 텍스트를 입력하세요..."}
+            className={`w-full h-32 p-3 border rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isSubmitted ? "bg-gray-50 cursor-not-allowed opacity-60" : ""}`}
+            readOnly={isSubmitted}
+            rows={6}
           />
         );
 
