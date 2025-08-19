@@ -3,7 +3,22 @@ import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // 먼저 일반 인증 확인
+    let user = await getCurrentUser();
+
+    // 데모 계정 확인
+    if (!user) {
+      const demoUserCookie = request.cookies.get('demoUser')?.value;
+      if (demoUserCookie) {
+        try {
+          const demoUser = JSON.parse(demoUserCookie);
+          // 데모 사용자 정보 반환
+          user = demoUser;
+        } catch (e) {
+          // 쿠키 파싱 실패 시 무시
+        }
+      }
+    }
 
     if (!user) {
       return NextResponse.json(

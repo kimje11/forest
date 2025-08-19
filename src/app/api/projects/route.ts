@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireAuthWithDemo } from "@/lib/auth";
 import { z } from "zod";
 
 const createProjectSchema = z.object({
   templateId: z.string().min(1, "템플릿을 선택해주세요."),
-  classId: z.string().optional(),
+  classId: z.string().optional().nullable(),
   title: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
   try {
-    // Supabase Auth를 통한 인증
-    const user = await requireAuth();
+    // 데모 계정을 포함한 인증
+    const user = await requireAuthWithDemo(request);
 
     if (!user) {
       return NextResponse.json(
@@ -161,8 +161,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Supabase Auth를 통한 인증 및 권한 확인
-    const user = await requireAuth(["STUDENT"]);
+    // 데모 계정을 포함한 인증 및 권한 확인
+    const user = await requireAuthWithDemo(request, ["STUDENT"]);
 
     if (!user) {
       return NextResponse.json(
@@ -172,7 +172,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("Project creation request body:", body);
     const validatedData = createProjectSchema.parse(body);
+    console.log("Validated data:", validatedData);
 
     // 템플릿 확인
     const template = await prisma.template.findUnique({
@@ -196,13 +198,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 클래스 확인 (선택사항)
-    if (validatedData.classId) {
+    // 클래스 확인 및 자동 할당
+    let finalClassId = validatedData.classId;
+    
+    if (!finalClassId) {
+      // classId가 없으면 학생의 첫 번째 클래스를 자동 할당
+      const firstEnrollment = await prisma.classEnrollment.findFirst({
+        where: { studentId: user.id },
+        include: { class: true }
+      });
+      
+      if (!firstEnrollment) {
+        return NextResponse.json(
+          { error: "참여중인 클래스가 없습니다. 먼저 클래스에 참여해주세요." },
+          { status: 400 }
+        );
+      }
+      
+      finalClassId = firstEnrollment.classId;
+    } else {
+      // classId가 제공된 경우 권한 확인
       const enrollment = await prisma.classEnrollment.findUnique({
         where: {
           studentId_classId: {
             studentId: user.id,
-            classId: validatedData.classId,
+            classId: finalClassId,
           },
         },
       });
@@ -220,7 +240,7 @@ export async function POST(request: NextRequest) {
       data: {
         title: validatedData.title || `${template.title} - ${user.name}`,
         studentId: user.id,
-        classId: validatedData.classId,
+        classId: finalClassId,
         templateId: template.id,
         status: "DRAFT",
       },

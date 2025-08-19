@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Trophy, Clock, Plus, User, Eye, RefreshCw } from "lucide-react";
 import JoinClassModal from "@/components/modals/join-class-modal";
+import ConceptHelper from "@/components/ai/concept-helper";
+import FeatureNote from "@/components/ui/feature-note";
 
 interface ClassData {
   id: string;
@@ -133,6 +135,19 @@ export default function StudentDashboard() {
 
   const handleLogout = async () => {
     try {
+      // 데모 계정 확인
+      const demoUser = localStorage.getItem('demoUser');
+      
+      if (demoUser) {
+        // 데모 계정 로그아웃 - localStorage와 쿠키 정리
+        localStorage.removeItem('demoUser');
+        document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        router.push("/auth/login");
+        router.refresh();
+        return;
+      }
+      
+      // 일반 Supabase 계정 로그아웃
       const { createClient } = await import("@/lib/supabase");
       const supabase = createClient();
       
@@ -144,6 +159,8 @@ export default function StudentDashboard() {
       router.push("/auth/login");
     }
   };
+
+
 
   if (isLoading) {
     return (
@@ -166,10 +183,21 @@ export default function StudentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">학생 대시보드</h1>
-              <p className="text-gray-600">안녕하세요, {user.name}님</p>
+              <h1 className="text-2xl font-bold text-gray-900">학생 대시보드에서 탐구를 시작해보십시다</h1>
+              <p className="text-gray-600">안녕하세요, {user.name}님! AI 도우미를 활용하여 흥미로운 탐구 활동을 시작해보십시다.</p>
             </div>
             <div className="flex gap-4">
+              <FeatureNote
+                title="학생 대시보드 사용법"
+                description="학생용 주요 기능들을 안내합니다"
+                details={[
+                  "AI 개념 탐구 도우미: 궁금한 질문을 입력하면 AI가 핵심 개념과 탐구 방향을 제안합니다",
+                  "탐구 활동 시작: 제공된 템플릿이나 자유 주제로 탐구 활동을 시작할 수 있습니다",
+                  "진행 상황 관리: 진행 중인 탐구와 완료된 탐구를 한눈에 확인할 수 있습니다",
+                  "포트폴리오 관리: 완성된 탐구 보고서를 포트폴리오로 관리하고 PDF로 내보낼 수 있습니다"
+                ]}
+                className="shrink-0"
+              />
               <Button variant="outline" onClick={handleLogout}>로그아웃</Button>
             </div>
           </div>
@@ -308,27 +336,50 @@ export default function StudentDashboard() {
           {/* 탐구 시작하기 */}
           <Card>
             <CardHeader>
-              <CardTitle>새 탐구 시작하기</CardTitle>
-              <CardDescription>
-                AI 추천이나 템플릿을 활용하여 새로운 탐구를 시작하세요.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>새 탐구를 시작해보십시다</CardTitle>
+                  <CardDescription>
+                    AI 도우미로 흥미로운 탐구 주제를 발견하고 시작해보십시다.
+                  </CardDescription>
+                </div>
+                <FeatureNote
+                  title="AI 개념 탐구 도우미 사용법"
+                  description="AI를 활용한 탐구 주제 발견 방법을 안내합니다"
+                  details={[
+                    "질문 입력: '왜 식물은 빛을 향해 자랄까?' 같은 궁금한 질문을 입력해보십시다",
+                    "과목 선택: 물리, 화학, 생물, 수학 등 관련 과목을 선택하면 더 정확한 분석을 받을 수 있습니다",
+                    "분석 결과 활용: AI가 제공하는 핵심 개념과 탐구 질문을 참고하여 탐구를 계획해보십시다",
+                    "직접 탐구 시작: 원하는 주제가 있다면 '직접 탐구 시작하기' 버튼을 눌러 바로 시작할 수 있습니다"
+                  ]}
+                  className="shrink-0"
+                />
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                className="w-full"
-                onClick={() => router.push("/student/explore")}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                탐구 시작하기
-              </Button>
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => router.push("/student/portfolio")}
-              >
-                <Trophy className="mr-2 h-4 w-4" />
-                포트폴리오 보기
-              </Button>
+            <CardContent className="space-y-6">
+              {/* AI 개념 도우미 */}
+              <ConceptHelper 
+                className="border-0 shadow-none bg-transparent p-0"
+              />
+              
+              {/* 기본 버튼들 */}
+              <div className="space-y-3 pt-4 border-t">
+                <Button 
+                  className="w-full"
+                  onClick={() => router.push("/student/explore")}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  직접 탐구 시작하기
+                </Button>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => router.push("/student/portfolio")}
+                >
+                  <Trophy className="mr-2 h-4 w-4" />
+                  포트폴리오 보기
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

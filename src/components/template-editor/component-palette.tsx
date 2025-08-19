@@ -11,7 +11,6 @@ import {
   Brain,
   GripVertical 
 } from "lucide-react";
-
 export type ComponentType = "TEXT" | "TEXTAREA" | "FILE_UPLOAD" | "MULTIPLE_CHOICE" | "CHECKBOX" | "AI_TOPIC_HELPER";
 
 interface ComponentItem {

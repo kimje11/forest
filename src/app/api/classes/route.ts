@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireAuthWithDemo } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
-    // Supabase Auth를 통한 인증
-    const user = await requireAuth();
+    // 데모 계정을 포함한 인증
+    const user = await requireAuthWithDemo(request);
 
     if (!user) {
       return NextResponse.json(
@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
               _count: {
                 select: {
                   enrollments: true,
-                  projects: true,
                 },
               },
             },
@@ -55,10 +54,28 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: "desc" },
       });
 
-      classes = enrollments.map(enrollment => ({
-        ...enrollment.class,
-        enrollmentDate: enrollment.createdAt,
-      }));
+      // 각 클래스별로 해당 학생의 프로젝트 개수를 별도로 계산
+      const classesWithProjectCount = await Promise.all(
+        enrollments.map(async (enrollment) => {
+          const projectCount = await prisma.project.count({
+            where: {
+              studentId: user.id,
+              classId: enrollment.class.id,
+            },
+          });
+
+          return {
+            ...enrollment.class,
+            enrollmentDate: enrollment.createdAt,
+            _count: {
+              ...enrollment.class._count,
+              projects: projectCount,
+            },
+          };
+        })
+      );
+
+      classes = classesWithProjectCount;
     }
 
     return NextResponse.json({ classes }, { status: 200 });

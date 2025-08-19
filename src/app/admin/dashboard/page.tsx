@@ -80,6 +80,19 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     try {
+      // 데모 계정 확인
+      const demoUser = localStorage.getItem('demoUser');
+      
+      if (demoUser) {
+        // 데모 계정 로그아웃 - localStorage와 쿠키 정리
+        localStorage.removeItem('demoUser');
+        document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        router.push("/auth/login");
+        router.refresh();
+        return;
+      }
+      
+      // 일반 Supabase 계정 로그아웃
       const { createClient } = await import("@/lib/supabase");
       const supabase = createClient();
       

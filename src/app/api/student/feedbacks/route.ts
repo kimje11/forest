@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireAuthWithDemo } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
-    // Supabase Auth를 통한 인증 및 학생 권한 확인
-    const user = await requireAuth(["STUDENT"]);
+    // 데모 계정을 포함한 인증 및 학생 권한 확인
+    const user = await requireAuthWithDemo(request, ["STUDENT"]);
 
     if (!user) {
       return NextResponse.json(

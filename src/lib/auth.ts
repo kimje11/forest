@@ -75,6 +75,38 @@ export async function requireAuth(allowedRoles?: string[]) {
   return user;
 }
 
+// 데모 계정 지원을 위한 새로운 함수
+export async function requireAuthWithDemo(request: any, allowedRoles?: string[]) {
+  // 먼저 일반 인증 시도
+  try {
+    const user = await getCurrentUser();
+    if (user) {
+      if (allowedRoles && !allowedRoles.includes(user.role)) {
+        throw new Error("권한이 없습니다.");
+      }
+      return user;
+    }
+  } catch (error) {
+    // 일반 인증 실패 시 데모 계정 확인
+  }
+
+  // 데모 계정 확인
+  const demoUserCookie = request.cookies.get('demoUser')?.value;
+  if (demoUserCookie) {
+    try {
+      const demoUser = JSON.parse(demoUserCookie);
+      if (allowedRoles && !allowedRoles.includes(demoUser.role)) {
+        throw new Error("권한이 없습니다.");
+      }
+      return demoUser;
+    } catch (e) {
+      // 데모 유저 파싱 실패
+    }
+  }
+
+  throw new Error("인증이 필요합니다.");
+}
+
 // Supabase Auth 사용자와 Prisma User 동기화
 export async function syncUserWithSupabase(authUser: any) {
   try {

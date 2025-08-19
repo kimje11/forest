@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { BookOpen, Users, Plus, BarChart3, Copy, Settings } from "lucide-react";
 import CreateClassModal from "@/components/modals/create-class-modal";
+import FeatureNote from "@/components/ui/feature-note";
 
 interface ClassData {
   id: string;
@@ -86,6 +87,19 @@ export default function TeacherDashboard() {
 
   const handleLogout = async () => {
     try {
+      // 데모 계정 확인
+      const demoUser = localStorage.getItem('demoUser');
+      
+      if (demoUser) {
+        // 데모 계정 로그아웃 - localStorage와 쿠키 정리
+        localStorage.removeItem('demoUser');
+        document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        router.push("/auth/login");
+        router.refresh();
+        return;
+      }
+      
+      // 일반 Supabase 계정 로그아웃
       const { createClient } = await import("@/lib/supabase");
       const supabase = createClient();
       
@@ -119,10 +133,21 @@ export default function TeacherDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">교사 대시보드</h1>
-              <p className="text-gray-600">안녕하세요, {user.name}님</p>
+              <h1 className="text-2xl font-bold text-gray-900">교사 대시보드를 활용해보십시다</h1>
+              <p className="text-gray-600">안녕하세요, {user.name}님! 탐구 템플릿을 만들고 학생들의 탐구 활동을 관리해보십시다.</p>
             </div>
             <div className="flex gap-4">
+              <FeatureNote
+                title="교사 대시보드 사용법"
+                description="교사용 주요 기능들을 안내합니다"
+                details={[
+                  "클래스 관리: 새로운 클래스를 생성하고 학생들을 초대할 수 있습니다",
+                  "템플릿 제작: AI 도우미를 활용하여 탐구 활동 템플릿을 만들 수 있습니다",
+                  "학습 모니터링: 학생들의 탐구 진행 상황과 제출 현황을 확인할 수 있습니다",
+                  "피드백 제공: 학생들의 탐구 활동에 대한 개별 피드백을 제공할 수 있습니다"
+                ]}
+                className="shrink-0"
+              />
               <Button variant="outline" onClick={handleLogout}>로그아웃</Button>
             </div>
           </div>

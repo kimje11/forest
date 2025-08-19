@@ -36,6 +36,21 @@ export default function AuthProvider({
   useEffect(() => {
     // 초기 사용자 상태 확인
     const getUser = async () => {
+      // 먼저 데모 계정 확인
+      const demoUser = localStorage.getItem('demoUser');
+      if (demoUser) {
+        try {
+          const demoUserData = JSON.parse(demoUser);
+          setUser(demoUserData as any);
+          setLoading(false);
+          return;
+        } catch (e) {
+          // 데모 유저 파싱 실패 시 localStorage 정리
+          localStorage.removeItem('demoUser');
+        }
+      }
+      
+      // 일반 Supabase 계정 확인
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -57,6 +72,18 @@ export default function AuthProvider({
   }, [supabase.auth]);
 
   const signOut = async () => {
+    // 데모 계정 확인
+    const demoUser = localStorage.getItem('demoUser');
+    
+    if (demoUser) {
+      // 데모 계정 로그아웃 - localStorage와 쿠키 정리
+      localStorage.removeItem('demoUser');
+      document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+      setUser(null);
+      return;
+    }
+    
+    // 일반 Supabase 계정 로그아웃
     await supabase.auth.signOut();
   };
 

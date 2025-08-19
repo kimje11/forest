@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireAuthWithDemo } from "@/lib/auth";
 import { z } from "zod";
 
 const updateInputSchema = z.object({
@@ -17,8 +17,8 @@ export async function PUT(
   try {
     const { id: projectId } = await params;
     
-    // Supabase Auth를 통한 인증
-    const user = await requireAuth();
+    // 데모 계정을 포함한 인증
+    const user = await requireAuthWithDemo(request);
 
     if (!user) {
       return NextResponse.json(

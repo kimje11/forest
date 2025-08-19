@@ -37,6 +37,17 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // 데모 계정 세션 확인 (localStorage는 서버에서 접근 불가하므로 쿠키나 헤더 확인)
+  const demoUserCookie = request.cookies.get('demoUser')?.value
+  let demoUser = null
+  if (demoUserCookie) {
+    try {
+      demoUser = JSON.parse(demoUserCookie)
+    } catch (e) {
+      // 쿠키 파싱 실패 시 무시
+    }
+  }
+
   // 보호된 경로들
   const protectedPaths = {
     teacher: ['/teacher'],
@@ -53,7 +64,7 @@ export async function middleware(request: NextRequest) {
   // 로그인/회원가입 페이지인지 확인
   const isAuthPath = protectedPaths.auth.some(path => pathname.startsWith(path))
 
-  if (!user && isProtectedPath) {
+  if (!user && !demoUser && isProtectedPath) {
     // 인증되지 않은 사용자가 보호된 경로에 접근하려고 할 때
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
@@ -61,10 +72,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthPath) {
+  if ((user || demoUser) && isAuthPath) {
     // 이미 로그인된 사용자가 로그인/회원가입 페이지에 접근하려고 할 때
-    // 사용자 메타데이터에서 역할 확인
-    const userRole = user.user_metadata?.role || user.app_metadata?.role
+    const userRole = user?.user_metadata?.role || user?.app_metadata?.role || demoUser?.role
 
     const url = request.nextUrl.clone()
     if (userRole === 'TEACHER') {
@@ -80,8 +90,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // 역할 기반 접근 제어
-  if (user && isProtectedPath) {
-    const userRole = user.user_metadata?.role || user.app_metadata?.role
+  if ((user || demoUser) && isProtectedPath) {
+    const userRole = user?.user_metadata?.role || user?.app_metadata?.role || demoUser?.role
 
     if (pathname.startsWith('/teacher') && userRole !== 'TEACHER') {
       const url = request.nextUrl.clone()

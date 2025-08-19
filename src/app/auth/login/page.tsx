@@ -30,6 +30,45 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
+      // 데모 계정인지 확인 (모든 @demo.com 이메일)
+      const isDemoAccount = formData.email.endsWith('@demo.com');
+      
+      if (isDemoAccount) {
+        // 데모 계정 로그인 처리
+        const response = await fetch('/api/auth/demo-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          setErrors({ form: result.error || "로그인에 실패했습니다." });
+          return;
+        }
+
+        // 데모 계정 로그인 성공 - 세션 저장 (localStorage와 쿠키 둘 다)
+        localStorage.setItem('demoUser', JSON.stringify(result.user));
+        document.cookie = `demoUser=${JSON.stringify(result.user)}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7일
+        
+        // 역할에 따라 리다이렉트
+        if (result.user.role === 'TEACHER') {
+          router.push('/teacher/dashboard');
+        } else if (result.user.role === 'STUDENT') {
+          router.push('/student/dashboard');
+        } else {
+          router.push('/');
+        }
+        return;
+      }
+
+      // 일반 Supabase 계정 로그인
       const supabase = createClient();
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -149,7 +188,65 @@ function LoginForm() {
               {isLoading ? "로그인 중..." : "로그인"}
             </Button>
 
-            <div className="text-center">
+            {/* 심사용 데모 계정 정보 */}
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-yellow-800 mb-3">📝 심사용 데모 계정</h3>
+              
+              {/* 교사 계정들 */}
+              <div className="mb-4">
+                <h4 className="text-xs font-medium text-gray-700 mb-2">🧑‍🏫 교사 계정</h4>
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  <div className="bg-white p-2 rounded border">
+                    <div className="font-medium text-blue-700">🧮 수학 교사</div>
+                    <div className="text-gray-600">이메일: math@demo.com</div>
+                    <div className="text-gray-600">비밀번호: 123</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border">
+                    <div className="font-medium text-purple-700">⚗️ 화학 교사</div>
+                    <div className="text-gray-600">이메일: chemistry@demo.com</div>
+                    <div className="text-gray-600">비밀번호: 123</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border">
+                    <div className="font-medium text-red-700">🔬 물리 교사</div>
+                    <div className="text-gray-600">이메일: physics@demo.com</div>
+                    <div className="text-gray-600">비밀번호: 123</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 학생 계정들 */}
+              <div className="mb-3">
+                <h4 className="text-xs font-medium text-gray-700 mb-2">👨‍🎓 학생 계정</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white p-2 rounded border">
+                    <div className="font-medium text-green-700">학생1</div>
+                    <div className="text-gray-600">student1@demo.com</div>
+                    <div className="text-gray-600">비밀번호: 123</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border">
+                    <div className="font-medium text-green-700">학생2</div>
+                    <div className="text-gray-600">student2@demo.com</div>
+                    <div className="text-gray-600">비밀번호: 123</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border">
+                    <div className="font-medium text-green-700">학생3</div>
+                    <div className="text-gray-600">student3@demo.com</div>
+                    <div className="text-gray-600">비밀번호: 123</div>
+                  </div>
+                  <div className="bg-white p-2 rounded border">
+                    <div className="font-medium text-green-700">학생4</div>
+                    <div className="text-gray-600">student4@demo.com</div>
+                    <div className="text-gray-600">비밀번호: 123</div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-yellow-700">
+                * 위 계정들로 로그인하시면 모든 기능을 체험하실 수 있습니다
+              </p>
+            </div>
+
+            <div className="text-center mt-4">
               <button
                 type="button"
                 onClick={() => router.push("/auth/register")}

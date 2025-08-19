@@ -183,8 +183,8 @@ export default function Home() {
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
                   <div>
-                    <h4 className="font-semibold">AI 평가 지원</h4>
-                    <p className="text-gray-600">학생부 기록을 위한 AI 보조</p>
+                    <h4 className="font-semibold">피드백 기능</h4>
+                    <p className="text-gray-600">학생 탐구 활동에 대한 개별 피드백 제공</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -237,7 +237,7 @@ export default function Home() {
             <span className="text-xl font-bold text-gray-900">탐구의 숲</span>
           </div>
           <div className="text-center text-gray-600">
-            <p>&copy; 2024 탐구의 숲. AI기반 자기주도 주제탐구학습 플랫폼</p>
+            <p>&copy; 2025 탐구의 숲. AI기반 자기주도 주제탐구학습 플랫폼</p>
           </div>
         </div>
       </footer>

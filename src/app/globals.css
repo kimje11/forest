@@ -77,3 +77,68 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+/* 표 스타일 */
+.table-container table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+  border: 1px solid #dee2e6;
+  font-size: 14px;
+}
+
+.table-container th {
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  font-weight: bold;
+  text-align: left;
+}
+
+.table-container td {
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+/* 다크 모드에서의 표 스타일 */
+@media (prefers-color-scheme: dark) {
+  .table-container table {
+    border-color: #374151;
+  }
+  
+  .table-container th {
+    background-color: #374151;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+  
+  .table-container td {
+    border-color: #374151;
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+}
+
+/* 표 편집기에서 사용되는 클래스 */
+.table-editor-inserted {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+  border: 1px solid #dee2e6;
+  font-size: 14px;
+}
+
+.table-editor-inserted th {
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  font-weight: bold;
+  text-align: left;
+}
+
+.table-editor-inserted td {
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  text-align: left;
+}

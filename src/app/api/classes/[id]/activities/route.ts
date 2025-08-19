@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireAuthWithDemo } from "@/lib/auth";
 import { z } from "zod";
 
 const createActivitySchema = z.object({
@@ -17,8 +17,8 @@ export async function GET(
   try {
     const { id: classId } = await params;
     
-    // Supabase Auth를 통한 인증
-    const user = await requireAuth();
+    // 데모 계정을 포함한 인증
+    const user = await requireAuthWithDemo(request);
 
     if (!user) {
       return NextResponse.json(
@@ -68,6 +68,7 @@ export async function GET(
     }
 
     // 해당 클래스에 할당된 활동들 조회
+    console.log("Fetching activities for classId:", classId);
     const classActivities = await prisma.classActivity.findMany({
       where: { 
         classId: classId,
@@ -95,6 +96,9 @@ export async function GET(
       },
       orderBy: { createdAt: "desc" },
     });
+
+    console.log("Found activities:", classActivities.length);
+    console.log("Activities:", classActivities.map(a => ({ id: a.id, title: a.title, isActive: a.isActive })));
 
     // 클래스 활동을 활동 형태로 변환
     const activities = classActivities.map((activity) => ({

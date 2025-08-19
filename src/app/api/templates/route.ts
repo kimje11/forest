@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireAuthWithDemo } from "@/lib/auth";
 import { z } from "zod";
 
 const createTemplateSchema = z.object({
@@ -24,8 +24,8 @@ const createTemplateSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    // Supabase Auth를 통한 인증
-    const user = await requireAuth();
+    // 데모 계정을 포함한 인증
+    const user = await requireAuthWithDemo(request);
 
     if (!user) {
       return NextResponse.json(
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Supabase Auth를 통한 인증 및 권한 확인
-    const user = await requireAuth(["TEACHER"]);
+    const user = await requireAuthWithDemo(request, ["TEACHER"]);
 
     if (!user) {
       return NextResponse.json(

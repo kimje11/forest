@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import TextWithTables from "@/components/ui/text-with-tables";
 import { 
   Users, 
   BookOpen, 
@@ -404,7 +405,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         </a>
                                       </div>
                                     ) : (
-                                      <p className="whitespace-pre-wrap">{input?.value}</p>
+                                      <TextWithTables>{input?.value || ''}</TextWithTables>
                                     )}
                                   </div>
                                 ) : (

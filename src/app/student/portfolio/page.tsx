@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import TextWithTables from "@/components/ui/text-with-tables";
+import { parseTextWithTables, sanitizeTableHtml } from "@/utils/table-renderer";
 import { 
   Trophy, 
   Calendar, 
@@ -93,6 +95,28 @@ export default function PortfolioPage() {
     fetchProjects();
     registerChartJS(); // Chart.js 동적 등록
   }, [checkAuth, fetchProjects, registerChartJS]);
+
+  // 텍스트를 HTML로 변환하는 헬퍼 함수 (표 지원)
+  const convertTextToHtml = useCallback((text: string, isLongText: boolean = false): string => {
+    if (!text) return '';
+    
+    const parsedContent = parseTextWithTables(text);
+    let html = '';
+    
+    parsedContent.forEach(item => {
+      if (item.type === 'text') {
+        // 텍스트는 줄바꿈을 <br>로 변환
+        html += item.content.replace(/\n/g, '<br>');
+      } else if (item.type === 'table') {
+        // 표는 안전하게 처리하여 삽입
+        html += sanitizeTableHtml(item.content);
+      }
+    });
+    
+    return isLongText ? 
+      `<div class="long-text-content">${html}</div>` : 
+      `<div class="short-text-content">${html}</div>`;
+  }, []);
 
   const exportPortfolio = useCallback(async () => {
     try {
@@ -365,10 +389,7 @@ export default function PortfolioPage() {
                                 <div class="component-section">
                                     <div class="component-label">${compIndex + 1}. ${component.label || component.type}</div>
                                     <div class="component-content">
-                                        ${component.type === 'LONG_TEXT' ? 
-                                            `<div class="long-text-content">${inputValue.replace(/\n/g, '<br>')}</div>` : 
-                                            `<div class="short-text-content">${inputValue}</div>`
-                                        }
+                                        ${convertTextToHtml(inputValue, component.type === 'LONG_TEXT')}
                                     </div>
                                 </div>
                             `;
@@ -647,10 +668,7 @@ export default function PortfolioPage() {
                                             <div class="component-section">
                                                 <div class="component-label">${compIndex + 1}. ${component.label || component.type}</div>
                                                 <div class="component-content">
-                                                    ${component.type === 'LONG_TEXT' ? 
-                                                        `<div class="long-text-content">${inputValue.replace(/\n/g, '<br>')}</div>` : 
-                                                        `<div class="short-text-content">${inputValue}</div>`
-                                                    }
+                                                    ${convertTextToHtml(inputValue, component.type === 'LONG_TEXT')}
                                                 </div>
                                             </div>
                                         `;

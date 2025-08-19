@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Calculator } from "lucide-react";
+import { Calculator, Table, Image, Upload, Eye, Edit3 } from "lucide-react";
+import TableEditor from "./table-editor";
+import TextWithTables from "./text-with-tables";
 import 'katex/dist/katex.min.css';
 
 interface MathEditorProps {
@@ -52,21 +54,135 @@ export default function MathEditor({
   const [isEditingMath, setIsEditingMath] = useState(false);
   const [editingMathContent, setEditingMathContent] = useState("");
   const [editingMathType, setEditingMathType] = useState<'inline' | 'block'>('inline');
+  const [isEditingTable, setIsEditingTable] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const insertMathExpression = (type: 'inline' | 'block') => {
     if (disabled) return;
     
-    // 수식 편집 모달 열기
+    // 편집 모드로 전환하고 수식 편집 모달 열기
+    setIsEditMode(true);
     setEditingMathType(type);
     setEditingMathContent('');
     setIsEditingMath(true);
   };
 
+  const insertTable = () => {
+    if (disabled) return;
+    // 편집 모드로 전환하고 표 편집 모달 열기
+    setIsEditMode(true);
+    setIsEditingTable(true);
+  };
+
+  // 이미지를 Base64로 변환하는 함수
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 이미지 삽입 함수
+  const insertImage = async (file: File) => {
+    if (disabled) return;
+    
+    setIsUploading(true);
+    try {
+      const base64 = await convertImageToBase64(file);
+      const imageHtml = `<img src="${base64}" alt="삽입된 이미지" style="max-width: 100%; height: auto; margin: 10px 0;" />`;
+      
+      const textarea = textareaRef.current;
+      if (textarea && isEditMode) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        
+        const newValue = value.substring(0, start) + imageHtml + value.substring(end);
+        onChange(newValue);
+        
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + imageHtml.length, start + imageHtml.length);
+        }, 0);
+      } else {
+        // 미리보기 모드일 때는 끝에 추가
+        onChange(value + imageHtml);
+      }
+      
+      // 이미지 삽입 후 미리보기 모드로 전환
+      setIsEditMode(false);
+    } catch (error) {
+      console.error('이미지 업로드 오류:', error);
+      alert('이미지 업로드에 실패했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // 파일 선택 핸들러
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      insertImage(file);
+    } else {
+      alert('이미지 파일만 업로드할 수 있습니다.');
+    }
+    // 파일 입력 초기화
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // 클립보드 붙여넣기 핸들러
+  const handlePaste = async (event: React.ClipboardEvent) => {
+    const items = event.clipboardData.items;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          await insertImage(file);
+        }
+        break;
+      }
+    }
+  };
+
+  const handleTableInsert = (tableHtml: string) => {
+    const textarea = textareaRef.current;
+    if (textarea && isEditMode) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      
+      const newValue = value.substring(0, start) + tableHtml + value.substring(end);
+      onChange(newValue);
+      
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + tableHtml.length, start + tableHtml.length);
+      }, 0);
+    } else {
+      // 미리보기 모드일 때는 단순히 끝에 추가
+      onChange(value + tableHtml);
+    }
+    
+    setIsEditingTable(false);
+    // 표 삽입 후 미리보기 모드로 전환
+    setIsEditMode(false);
+  };
+
   const saveMathEdit = () => {
     if (!editingMathContent.trim()) return;
     
-    const textarea = document.querySelector('textarea[data-math-editor]') as HTMLTextAreaElement;
-    if (textarea) {
+    const textarea = textareaRef.current;
+    if (textarea && isEditMode) {
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       
@@ -80,10 +196,16 @@ export default function MathEditor({
         textarea.focus();
         textarea.setSelectionRange(start + convertedMath.length, start + convertedMath.length);
       }, 0);
+    } else {
+      // 미리보기 모드일 때는 단순히 끝에 추가
+      const convertedMath = convertLatexToSymbols(editingMathContent);
+      onChange(value + convertedMath);
     }
     
     setIsEditingMath(false);
     setEditingMathContent('');
+    // 수식 삽입 후 미리보기 모드로 전환
+    setIsEditMode(false);
   };
 
   const cancelMathEdit = () => {
@@ -288,22 +410,92 @@ export default function MathEditor({
           <Calculator className="h-4 w-4 mr-1" />
           수식 입력
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={insertTable}
+          disabled={disabled}
+        >
+          <Table className="h-4 w-4 mr-1" />
+          표 삽입
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || isUploading}
+        >
+          {isUploading ? (
+            <Upload className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Image className="h-4 w-4 mr-1" />
+          )}
+          {isUploading ? "업로드 중..." : "이미지 첨부"}
+        </Button>
+        <Button
+          size="sm"
+          variant={isEditMode ? "default" : "outline"}
+          onClick={() => setIsEditMode(!isEditMode)}
+          disabled={disabled}
+        >
+          {isEditMode ? (
+            <>
+              <Eye className="h-4 w-4 mr-1" />
+              미리보기
+            </>
+          ) : (
+            <>
+              <Edit3 className="h-4 w-4 mr-1" />
+              편집
+            </>
+          )}
+        </Button>
       </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">텍스트 입력</label>
-        <textarea
-          data-math-editor
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="w-full h-64 p-3 border rounded-md resize-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-        />
-        <div className="text-xs text-gray-500">
-          수식 입력 버튼을 클릭하여 수학 기호를 입력하세요.
-        </div>
+        {isEditMode ? (
+          <>
+            <textarea
+              ref={textareaRef}
+              data-math-editor
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onPaste={handlePaste}
+              placeholder={placeholder}
+              disabled={disabled}
+              className="w-full h-64 p-3 border rounded-md resize-none text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+            />
+            <div className="text-xs text-gray-500">
+              편집 모드: HTML 태그와 텍스트를 직접 편집할 수 있습니다. Ctrl+V로 이미지를 붙여넣을 수 있습니다.
+            </div>
+          </>
+        ) : (
+          <>
+            <div 
+              className={`w-full h-64 p-3 border rounded-md overflow-y-auto text-sm ${disabled ? 'bg-gray-50' : 'bg-white'}`}
+            >
+              {value ? (
+                <TextWithTables>{value}</TextWithTables>
+              ) : (
+                <div className="text-gray-400">{placeholder}</div>
+              )}
+            </div>
+            <div className="text-xs text-gray-500">
+              미리보기 모드: 표와 수식, 이미지가 실제 모습으로 표시됩니다. 위의 "편집" 버튼을 클릭하여 수정하세요.
+            </div>
+          </>
+        )}
       </div>
+
+      {/* 숨겨진 파일 입력 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
 
       {/* 수식 편집 모달 */}
       {isEditingMath && (
@@ -410,6 +602,14 @@ export default function MathEditor({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 표 편집 모달 */}
+      {isEditingTable && (
+        <TableEditor
+          onInsert={handleTableInsert}
+          onClose={() => setIsEditingTable(false)}
+        />
       )}
     </div>
   );

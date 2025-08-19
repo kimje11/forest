@@ -133,6 +133,8 @@ export default function ExplorePage() {
     alert(`"${topic.title}" 주제를 선택했습니다. 템플릿을 선택하여 탐구를 시작해보세요!`);
   };
 
+
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
