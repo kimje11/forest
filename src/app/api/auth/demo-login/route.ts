@@ -57,6 +57,76 @@ export async function POST(request: NextRequest) {
           where: { email }
         });
         console.log("Database query result:", user ? "User found" : "User not found");
+        
+        // 사용자가 데이터베이스에 없으면 생성
+        if (!user) {
+          console.log("Creating demo user in database...");
+          const demoUserData = {
+            'math@demo.com': {
+              id: 'demo-teacher-math',
+              email: 'math@demo.com',
+              name: '김수학',
+              role: 'TEACHER',
+              password: '123'
+            },
+            'chemistry@demo.com': {
+              id: 'demo-teacher-chemistry',
+              email: 'chemistry@demo.com',
+              name: '이화학',
+              role: 'TEACHER',
+              password: '123'
+            },
+            'physics@demo.com': {
+              id: 'demo-teacher-physics',
+              email: 'physics@demo.com',
+              name: '박물리',
+              role: 'TEACHER',
+              password: '123'
+            },
+            'student1@demo.com': {
+              id: 'demo-student-1',
+              email: 'student1@demo.com',
+              name: '학생1',
+              role: 'STUDENT',
+              password: '123'
+            },
+            'student2@demo.com': {
+              id: 'demo-student-2',
+              email: 'student2@demo.com',
+              name: '학생2',
+              role: 'STUDENT',
+              password: '123'
+            },
+            'student3@demo.com': {
+              id: 'demo-student-3',
+              email: 'student3@demo.com',
+              name: '학생3',
+              role: 'STUDENT',
+              password: '123'
+            },
+            'student4@demo.com': {
+              id: 'demo-student-4',
+              email: 'student4@demo.com',
+              name: '학생4',
+              role: 'STUDENT',
+              password: '123'
+            }
+          };
+          
+          const userData = demoUserData[email as keyof typeof demoUserData];
+          if (userData) {
+            user = await prisma.user.create({
+              data: {
+                id: userData.id,
+                email: userData.email,
+                name: userData.name,
+                password: userData.password,
+                role: userData.role,
+              }
+            });
+            console.log("Demo user created in database:", user.name);
+          }
+        }
       } catch (dbError) {
         console.error("Database error:", dbError);
         // 데이터베이스 연결 실패 시 하드코딩된 데모 사용자 사용

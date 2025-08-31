@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     console.log("User authenticated:", user.email, user.role);
 
     // 실제 데이터베이스 사용
-    let classes = [];
+    let classes: any[] = [];
 
     try {
       if (user.role === "TEACHER") {
@@ -97,13 +97,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ classes }, { status: 200 });
     } catch (prismaError) {
       console.error("Prisma database error:", prismaError);
-      return NextResponse.json(
-        { 
-          error: "데이터베이스 연결 오류가 발생했습니다.",
-          details: process.env.NODE_ENV === 'development' ? String(prismaError) : undefined
-        },
-        { status: 500 }
-      );
+      // 데이터베이스 연결 실패 시 빈 배열 반환 (에러 대신)
+      console.log("Database connection failed, returning empty classes array");
+      return NextResponse.json({ classes: [] }, { status: 200 });
     }
   } catch (error) {
     console.error("Get classes error:", error);
