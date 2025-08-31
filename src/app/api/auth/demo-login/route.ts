@@ -67,49 +67,49 @@ export async function POST(request: NextRequest) {
             email: 'math@demo.com',
             name: '김수학',
             role: 'TEACHER',
-            password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi' // 'password'의 해시
+            password: '123' // 간단한 문자열로 변경
           },
           'chemistry@demo.com': {
             id: 'demo-teacher-chemistry',
             email: 'chemistry@demo.com',
             name: '이화학',
             role: 'TEACHER',
-            password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'
+            password: '123'
           },
           'physics@demo.com': {
             id: 'demo-teacher-physics',
             email: 'physics@demo.com',
             name: '박물리',
             role: 'TEACHER',
-            password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'
+            password: '123'
           },
           'student1@demo.com': {
             id: 'demo-student-1',
             email: 'student1@demo.com',
             name: '학생1',
             role: 'STUDENT',
-            password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'
+            password: '123'
           },
           'student2@demo.com': {
             id: 'demo-student-2',
             email: 'student2@demo.com',
             name: '학생2',
             role: 'STUDENT',
-            password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'
+            password: '123'
           },
           'student3@demo.com': {
             id: 'demo-student-3',
             email: 'student3@demo.com',
             name: '학생3',
             role: 'STUDENT',
-            password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'
+            password: '123'
           },
           'student4@demo.com': {
             id: 'demo-student-4',
             email: 'student4@demo.com',
             name: '학생4',
             role: 'STUDENT',
-            password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'
+            password: '123'
           }
         };
         
@@ -127,26 +127,35 @@ export async function POST(request: NextRequest) {
 
     console.log(`User found: ${user.name}`);
     
-    // 비밀번호 확인 (bcrypt 비교)
-    try {
-      const passwordMatch = await bcrypt.compare(password, user.password || '');
-      if (!passwordMatch) {
-        console.log(`Login failed for ${email}: password mismatch`);
-        return NextResponse.json(
-          { error: '비밀번호가 올바르지 않습니다.' },
-          { status: 401 }
-        );
+    // 비밀번호 확인
+    console.log(`Checking password for ${email}`);
+    console.log(`Input password: ${password}`);
+    console.log(`Stored password: ${user.password}`);
+    
+    let passwordMatch = false;
+    
+    // 먼저 bcrypt로 시도
+    if (user.password && user.password.startsWith('$2a$')) {
+      try {
+        passwordMatch = await bcrypt.compare(password, user.password);
+        console.log(`Bcrypt comparison result: ${passwordMatch}`);
+      } catch (bcryptError) {
+        console.error("Bcrypt error:", bcryptError);
       }
-    } catch (bcryptError) {
-      console.error("Bcrypt error:", bcryptError);
-      // bcrypt 실패 시 간단한 문자열 비교 (fallback)
-      if (password !== '123') {
-        console.log(`Login failed for ${email}: password mismatch (fallback)`);
-        return NextResponse.json(
-          { error: '비밀번호가 올바르지 않습니다.' },
-          { status: 401 }
-        );
-      }
+    }
+    
+    // bcrypt가 실패하거나 해시가 아닌 경우 직접 비교
+    if (!passwordMatch) {
+      passwordMatch = (password === user.password);
+      console.log(`Direct comparison result: ${passwordMatch}`);
+    }
+    
+    if (!passwordMatch) {
+      console.log(`Login failed for ${email}: password mismatch`);
+      return NextResponse.json(
+        { error: '비밀번호가 올바르지 않습니다.' },
+        { status: 401 }
+      );
     }
 
     console.log(`Login successful for ${email}`);
