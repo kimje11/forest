@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuthWithDemo } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
@@ -9,8 +9,8 @@ export async function GET(
   try {
     const { id: classId } = await params;
     
-    // Supabase Auth를 통한 인증 및 권한 확인
-    const user = await requireAuth(["TEACHER"]);
+    // 데모 계정도 실제 데이터베이스 사용하므로 일반 인증 사용
+    const user = await requireAuthWithDemo(request, ["TEACHER"]);
 
     if (!user) {
       return NextResponse.json(
