@@ -347,28 +347,28 @@ export async function POST(request: NextRequest) {
 
     console.log(`User found: ${user.name}`);
     
-    // 비밀번호 확인
+    // 비밀번호 확인 - 데이터베이스에서 실제 사용자 정보 가져오기
     console.log(`Checking password for ${email}`);
     console.log(`Input password: ${password}`);
-    console.log(`Stored password: ${user.password}`);
     
-    let passwordMatch = false;
+    // 데이터베이스에서 실제 사용자 정보 가져오기
+    const dbUser = await prisma.user.findUnique({
+      where: { email }
+    });
     
-    // 먼저 bcrypt로 시도
-    if (user.password && user.password.startsWith('$2a$')) {
-      try {
-        passwordMatch = await bcrypt.compare(password, user.password);
-        console.log(`Bcrypt comparison result: ${passwordMatch}`);
-      } catch (bcryptError) {
-        console.error("Bcrypt error:", bcryptError);
-      }
+    if (!dbUser) {
+      console.log(`User not found in database: ${email}`);
+      return NextResponse.json(
+        { error: '사용자를 찾을 수 없습니다.' },
+        { status: 404 }
+      );
     }
     
-    // bcrypt가 실패하거나 해시가 아닌 경우 직접 비교
-    if (!passwordMatch) {
-      passwordMatch = (password === user.password);
-      console.log(`Direct comparison result: ${passwordMatch}`);
-    }
+    console.log(`Stored password hash: ${dbUser.password.substring(0, 20)}...`);
+    
+    // bcrypt로 비밀번호 검증
+    const passwordMatch = await bcrypt.compare(password, dbUser.password);
+    console.log(`Bcrypt comparison result: ${passwordMatch}`);
     
     if (!passwordMatch) {
       console.log(`Login failed for ${email}: password mismatch`);
@@ -377,6 +377,14 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    
+    // 검증된 사용자 정보 사용
+    user = {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      role: dbUser.role
+    };
 
     console.log(`Login successful for ${email}`);
 

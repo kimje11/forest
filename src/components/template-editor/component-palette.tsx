@@ -53,7 +53,7 @@ const componentItems: ComponentItem[] = [
     },
   },
   {
-    type: "MATH_EDITOR",
+    type: "TEXTAREA",
     label: "수식 및 표 입력",
     description: "수학 수식, 표, 이미지가 포함된 내용 입력",
     icon: Calculator,

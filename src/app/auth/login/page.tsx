@@ -232,27 +232,51 @@ function LoginFormContent() {
             </div>
 
             {/* 심사용 데모 계정 정보 */}
-            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h3 className="text-sm font-semibold text-yellow-800 mb-3">📝 심사용 데모 계정</h3>
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-blue-800 mb-2">🎓 데모 계정으로 체험하기</h3>
+              <p className="text-xs text-blue-700 mb-3">
+                아래 계정으로 로그인하시면 모든 기능을 체험하실 수 있습니다.
+              </p>
               
               {/* 교사 계정들 */}
               <div className="mb-4">
                 <h4 className="text-xs font-medium text-gray-700 mb-2">🧑‍🏫 교사 계정</h4>
                 <div className="grid grid-cols-1 gap-2 text-xs">
-                  <div className="bg-white p-2 rounded border">
-                    <div className="font-medium text-blue-700">🧮 수학 교사</div>
-                    <div className="text-gray-600">이메일: math@demo.com</div>
-                    <div className="text-gray-600">비밀번호: 123</div>
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-blue-700 mb-1">👨‍🏫 교사1</div>
+                        <div className="text-gray-600">teacher1@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'teacher1@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
                   </div>
-                  <div className="bg-white p-2 rounded border">
-                    <div className="font-medium text-purple-700">⚗️ 화학 교사</div>
-                    <div className="text-gray-600">이메일: chemistry@demo.com</div>
-                    <div className="text-gray-600">비밀번호: 123</div>
-                  </div>
-                  <div className="bg-white p-2 rounded border">
-                    <div className="font-medium text-red-700">🔬 물리 교사</div>
-                    <div className="text-gray-600">이메일: physics@demo.com</div>
-                    <div className="text-gray-600">비밀번호: 123</div>
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-purple-700 mb-1">👨‍🏫 교사2</div>
+                        <div className="text-gray-600">teacher2@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'teacher2@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -260,33 +284,108 @@ function LoginFormContent() {
               {/* 학생 계정들 */}
               <div className="mb-3">
                 <h4 className="text-xs font-medium text-gray-700 mb-2">👨‍🎓 학생 계정</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-white p-2 rounded border">
-                    <div className="font-medium text-green-700">학생1</div>
-                    <div className="text-gray-600">student1@demo.com</div>
-                    <div className="text-gray-600">비밀번호: 123</div>
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-green-700 mb-1">👨‍🎓 학생1</div>
+                        <div className="text-gray-600">student1@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'student1@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
                   </div>
-                  <div className="bg-white p-2 rounded border">
-                    <div className="font-medium text-green-700">학생2</div>
-                    <div className="text-gray-600">student2@demo.com</div>
-                    <div className="text-gray-600">비밀번호: 123</div>
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-green-700 mb-1">👨‍🎓 학생2</div>
+                        <div className="text-gray-600">student2@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'student2@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
                   </div>
-                  <div className="bg-white p-2 rounded border">
-                    <div className="font-medium text-green-700">학생3</div>
-                    <div className="text-gray-600">student3@demo.com</div>
-                    <div className="text-gray-600">비밀번호: 123</div>
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-green-700 mb-1">👨‍🎓 학생3</div>
+                        <div className="text-gray-600">student3@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'student3@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
                   </div>
-                  <div className="bg-white p-2 rounded border">
-                    <div className="font-medium text-green-700">학생4</div>
-                    <div className="text-gray-600">student4@demo.com</div>
-                    <div className="text-gray-600">비밀번호: 123</div>
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-green-700 mb-1">👨‍🎓 학생4</div>
+                        <div className="text-gray-600">student4@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'student4@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-green-700 mb-1">👨‍🎓 학생5</div>
+                        <div className="text-gray-600">student5@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'student5@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <p className="text-xs text-yellow-700">
-                * 위 계정들로 로그인하시면 모든 기능을 체험하실 수 있습니다
-              </p>
+              <div className="mt-3 pt-3 border-t border-blue-200">
+                <p className="text-xs text-blue-600">
+                  💡 <strong>교사 계정</strong>으로 로그인하면 템플릿 생성, 클래스 관리, 학생 피드백 등의 기능을 체험할 수 있습니다.
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  💡 <strong>학생 계정</strong>으로 로그인하면 프로젝트 작성, 제출, 피드백 확인 등의 기능을 체험할 수 있습니다.
+                </p>
+              </div>
               
 
             </div>

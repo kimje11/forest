@@ -104,13 +104,40 @@ export async function requireAuthWithDemo(request: any, allowedRoles?: string[])
       const demoUser = JSON.parse(demoUserCookie);
       console.log("Demo user parsed:", demoUser.email);
       
-      if (allowedRoles && !allowedRoles.includes(demoUser.role)) {
-        console.log("Demo user role not allowed:", demoUser.role);
-        throw new Error("권한이 없습니다.");
-      }
+      // 데모 계정도 데이터베이스에서 실제 사용자 정보 가져오기
+      const dbUser = await prisma.user.findUnique({
+        where: { email: demoUser.email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          createdAt: true,
+        },
+      });
       
-      console.log("Returning demo user:", demoUser.email);
-      return demoUser;
+      if (dbUser) {
+        console.log("Demo user found in database:", dbUser.email);
+        
+        if (allowedRoles && !allowedRoles.includes(dbUser.role)) {
+          console.log("Demo user role not allowed:", dbUser.role);
+          throw new Error("권한이 없습니다.");
+        }
+        
+        console.log("Returning demo user from database:", dbUser.email);
+        return dbUser;
+      } else {
+        console.log("Demo user not found in database, using cookie data");
+        
+        if (allowedRoles && !allowedRoles.includes(demoUser.role)) {
+          console.log("Demo user role not allowed:", demoUser.role);
+          throw new Error("권한이 없습니다.");
+        }
+        
+        console.log("Returning demo user from cookie:", demoUser.email);
+        return demoUser;
+      }
     } catch (e) {
       console.error("Demo user parsing error:", e);
     }

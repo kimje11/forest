@@ -35,7 +35,7 @@ async function checkDemoAccounts() {
       console.log(`  생성일: ${teacher.createdAt.toLocaleDateString()}`);
       
       // 비밀번호 확인
-      const passwordMatch = await bcrypt.compare('demo123!', teacher.password || '');
+      const passwordMatch = await bcrypt.compare('123', teacher.password || '');
       console.log(`  비밀번호 확인: ${passwordMatch ? '✓ 올바름' : '✗ 불일치'}`);
       console.log();
     }
@@ -48,7 +48,7 @@ async function checkDemoAccounts() {
       console.log(`  ID: ${student.id}`);
       
       // 비밀번호 확인
-      const passwordMatch = await bcrypt.compare('demo123!', student.password || '');
+      const passwordMatch = await bcrypt.compare('123', student.password || '');
       console.log(`  비밀번호: ${passwordMatch ? '✓' : '✗'}`);
     }
 
@@ -59,8 +59,8 @@ async function checkDemoAccounts() {
       console.log(`테스트 사용자: ${testUser.name}`);
       console.log(`저장된 해시: ${testUser.password?.substring(0, 20)}...`);
       
-      const isCorrect = await bcrypt.compare('demo123!', testUser.password || '');
-      console.log(`'demo123!' 일치 여부: ${isCorrect ? '✓' : '✗'}`);
+      const isCorrect = await bcrypt.compare('123', testUser.password || '');
+      console.log(`'123' 일치 여부: ${isCorrect ? '✓' : '✗'}`);
     }
 
   } catch (error) {

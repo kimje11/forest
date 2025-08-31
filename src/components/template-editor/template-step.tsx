@@ -71,7 +71,7 @@ function ComponentEditor({
       required: formData.required,
     };
 
-    if (component.type === "TEXT" || component.type === "TEXTAREA" || component.type === "MATH_EDITOR") {
+    if (component.type === "TEXT" || component.type === "TEXTAREA") {
       updates.placeholder = formData.placeholder;
     }
 
