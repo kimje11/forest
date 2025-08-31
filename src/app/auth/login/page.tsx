@@ -288,8 +288,8 @@ function LoginFormContent() {
                 * 위 계정들로 로그인하시면 모든 기능을 체험하실 수 있습니다
               </p>
               
-              {/* 세션 정리 버튼 */}
-              <div className="mt-3 pt-3 border-t border-yellow-200">
+              {/* 세션 정리 및 데모 데이터 생성 버튼 */}
+              <div className="mt-3 pt-3 border-t border-yellow-200 space-y-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -297,9 +297,30 @@ function LoginFormContent() {
                     checkAuthStatus();
                     alert('모든 세션 데이터가 정리되었습니다. 페이지를 새로고침해주세요.');
                   }}
-                  className="text-xs text-red-600 hover:text-red-500 hover:underline"
+                  className="text-xs text-red-600 hover:text-red-500 hover:underline block"
                 >
                   🔧 세션 데이터 완전 정리 (문제 해결용)
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/admin/setup-demo-data', {
+                        method: 'POST'
+                      });
+                      const result = await response.json();
+                      if (response.ok) {
+                        alert('데모 데이터가 성공적으로 생성되었습니다! 이제 데모 계정으로 로그인하면 실제 데이터를 볼 수 있습니다.');
+                      } else {
+                        alert('데모 데이터 생성 실패: ' + result.error);
+                      }
+                    } catch (error) {
+                      alert('데모 데이터 생성 중 오류가 발생했습니다.');
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-500 hover:underline block"
+                >
+                  📊 데모 데이터 생성 (Supabase 연결용)
                 </button>
               </div>
             </div>

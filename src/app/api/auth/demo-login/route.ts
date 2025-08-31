@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     
     // 먼저 쿠키에서 업데이트된 사용자 정보 확인
     const demoUserCookie = request.cookies.get('demoUser')?.value;
-    let user = null;
+    let user: any = null;
     
     if (demoUserCookie) {
       try {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         // 사용자가 데이터베이스에 없으면 생성
         if (!user) {
           console.log("Creating demo user in database...");
-          const demoUserData = {
+          const demoUserData: Record<string, any> = {
             'math@demo.com': {
               id: 'demo-teacher-math',
               email: 'math@demo.com',
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
                 email: userData.email,
                 name: userData.name,
                 password: userData.password,
-                role: userData.role,
+                role: userData.role as any,
               }
             });
             console.log("Demo user created in database:", user.name);
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         console.error("Database error:", dbError);
         // 데이터베이스 연결 실패 시 하드코딩된 데모 사용자 사용
         console.log("Using fallback demo users due to database error");
-        const fallbackUsers = {
+        const fallbackUsers: Record<string, any> = {
           'math@demo.com': {
             id: 'demo-teacher-math',
             email: 'math@demo.com',

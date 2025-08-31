@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
           },
           orderBy: { createdAt: "desc" },
         });
+        
+        console.log(`Found ${classes.length} classes for teacher ${user.name}`);
       } else if (user.role === "STUDENT") {
         // 학생이 참여한 클래스 목록
         const enrollments = await prisma.classEnrollment.findMany({
@@ -92,6 +94,7 @@ export async function GET(request: NextRequest) {
         );
 
         classes = classesWithProjectCount;
+        console.log(`Found ${classes.length} classes for student ${user.name}`);
       }
 
       return NextResponse.json({ classes }, { status: 200 });

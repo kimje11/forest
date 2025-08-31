@@ -3,6 +3,7 @@ import { requireAuthWithDemo } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 const verifyPasswordSchema = z.object({
   password: z.string().min(1, "비밀번호를 입력해주세요."),
@@ -54,24 +55,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // 일반 계정의 경우 데이터베이스에서 비밀번호 확인
+    // 일반 계정의 경우 Supabase Auth를 통해 비밀번호 확인
     try {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: {
-          password: true,
-        },
+      const supabase = await createServerSupabaseClient();
+      
+      // Supabase Auth를 통해 비밀번호 확인
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: password,
       });
 
-      if (!currentUser) {
+      if (error) {
+        console.error("Supabase password verification error:", error);
         return NextResponse.json(
-          { error: "사용자를 찾을 수 없습니다." },
-          { status: 404 }
+          { error: "비밀번호가 일치하지 않습니다." },
+          { status: 401 }
         );
       }
 
-      const isValidPassword = await bcrypt.compare(password, currentUser.password);
-      if (!isValidPassword) {
+      if (!data.user) {
         return NextResponse.json(
           { error: "비밀번호가 일치하지 않습니다." },
           { status: 401 }
@@ -80,8 +82,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true });
 
-    } catch (prismaError) {
-      console.error("Prisma error in password verification:", prismaError);
+    } catch (supabaseError) {
+      console.error("Supabase error in password verification:", supabaseError);
       return NextResponse.json(
         { error: "서버 오류가 발생했습니다." },
         { status: 500 }

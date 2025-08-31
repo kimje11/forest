@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthWithDemo } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 // 프로필 수정 스키마
 const updateProfileSchema = z.object({
@@ -189,19 +190,49 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      // 데모 계정이 아닌 경우에만 비밀번호 확인
+      // Supabase Auth 계정의 경우 Supabase를 통해 비밀번호 변경
       if (!user.email.includes("@demo.com")) {
-        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, currentUser.password);
-        if (!isCurrentPasswordValid) {
+        try {
+          const supabase = await createServerSupabaseClient();
+          
+          // Supabase Auth를 통해 비밀번호 변경
+          const { error } = await supabase.auth.updateUser({
+            password: newPassword
+          });
+
+          if (error) {
+            console.error("Supabase password update error:", error);
+            return NextResponse.json(
+              { error: "비밀번호 변경 중 오류가 발생했습니다." },
+              { status: 500 }
+            );
+          }
+
+          // Supabase Auth에서 성공적으로 비밀번호가 변경되었으므로
+          // Prisma 데이터베이스의 비밀번호 필드는 빈 문자열로 유지
+          hashedNewPassword = "";
+        } catch (supabaseError) {
+          console.error("Supabase error in password update:", supabaseError);
           return NextResponse.json(
-            { error: "현재 비밀번호가 올바르지 않습니다." },
-            { status: 400 }
+            { error: "비밀번호 변경 중 오류가 발생했습니다." },
+            { status: 500 }
           );
         }
-      }
+      } else {
+        // 데모 계정의 경우 기존 로직 사용
+        if (user.password) {
+          const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+          if (!isCurrentPasswordValid) {
+            return NextResponse.json(
+              { error: "현재 비밀번호가 올바르지 않습니다." },
+              { status: 400 }
+            );
+          }
+        }
 
-      // 새 비밀번호 해싱
-      hashedNewPassword = await bcrypt.hash(newPassword, 12);
+        // 새 비밀번호 해싱
+        hashedNewPassword = await bcrypt.hash(newPassword, 12);
+      }
     }
 
     // 프로필 업데이트
