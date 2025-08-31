@@ -50,13 +50,32 @@ function LoginFormContent() {
         const result = await response.json();
 
         if (!response.ok) {
+          console.error('Demo login failed:', result);
           setErrors({ form: result.error || "로그인에 실패했습니다." });
           return;
         }
 
+        console.log('Demo login successful:', result.user);
+        
         // 데모 계정 로그인 성공 - 세션 저장 (localStorage와 쿠키 둘 다)
         localStorage.setItem('demoUser', JSON.stringify(result.user));
-        document.cookie = `demoUser=${JSON.stringify(result.user)}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7일
+        
+        // 쿠키 설정 (Vercel 환경 고려)
+        const isProduction = process.env.NODE_ENV === 'production';
+        const isVercel = window.location.hostname.includes('vercel.app');
+        
+        const cookieOptions = [
+          `demoUser=${JSON.stringify(result.user)}`,
+          'path=/',
+          `max-age=${60 * 60 * 24 * 7}`, // 7일
+          'sameSite=lax'
+        ];
+        
+        if (isProduction || isVercel) {
+          cookieOptions.push('secure');
+        }
+        
+        document.cookie = cookieOptions.join('; ');
         
         // 역할에 따라 리다이렉트
         if (result.user.role === 'TEACHER') {

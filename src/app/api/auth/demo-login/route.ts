@@ -6,9 +6,14 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("Demo login API called");
+    console.log("Environment:", process.env.NODE_ENV);
+    console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
+    
     const { email, password } = await request.json();
 
     if (!email || !password) {
+      console.log("Missing email or password");
       return NextResponse.json(
         { error: '이메일과 비밀번호를 입력해주세요.' },
         { status: 400 }
@@ -17,6 +22,7 @@ export async function POST(request: NextRequest) {
 
     // 데모 계정인지 확인 (demo.com 도메인)
     if (!email.endsWith('@demo.com')) {
+      console.log("Not a demo account:", email);
       return NextResponse.json(
         { error: '데모 계정이 아닙니다.' },
         { status: 400 }
@@ -84,17 +90,21 @@ export async function POST(request: NextRequest) {
     });
 
     // 데모 사용자 정보를 쿠키에 저장 (업데이트된 정보 포함)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isVercel = process.env.VERCEL === '1';
+    
+    console.log("Setting cookie with production settings:", isProduction, "Vercel:", isVercel);
+    
     response.cookies.set('demoUser', JSON.stringify({
       id: user.id,
       email: user.email,
       name: user.name,
-
       role: user.role,
       password: user.password // 비밀번호도 포함하여 다음 로그인 시 사용
     }), {
       path: '/',
       httpOnly: false, // 클라이언트에서 접근 가능하도록
-      secure: false,   // 개발 환경에서는 false
+      secure: isProduction || isVercel, // Vercel에서는 HTTPS이므로 true
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7 // 7일
     });
@@ -103,11 +113,24 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Demo login error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
+    
     return NextResponse.json(
-      { error: '로그인 중 오류가 발생했습니다.' },
+      { 
+        error: '로그인 중 오류가 발생했습니다.',
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      },
       { status: 500 }
     );
   } finally {
-    await prisma.$disconnect();
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error('Prisma disconnect error:', disconnectError);
+    }
   }
 }
