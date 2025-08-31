@@ -31,6 +31,8 @@ export async function middleware(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
+  const { pathname } = request.nextUrl
+
   // 세션과 사용자 정보 모두 확인 (implicit flow 사용)
   let session = null
   let user = null
@@ -44,13 +46,13 @@ export async function middleware(request: NextRequest) {
     
     // AuthSessionMissingError는 정상적인 상황이므로 무시
     if (sessionResult.error && sessionResult.error.name === 'AuthSessionMissingError') {
-      console.log("No session found in middleware (normal for unauthenticated users)")
+      console.log(`No session found in middleware for ${pathname} (normal for unauthenticated users)`)
     } else if (sessionResult.error) {
       console.error("Session error in middleware:", sessionResult.error)
     }
     
     if (userResult.error && userResult.error.name === 'AuthSessionMissingError') {
-      console.log("No user found in middleware (normal for unauthenticated users)")
+      console.log(`No user found in middleware for ${pathname} (normal for unauthenticated users)`)
     } else if (userResult.error) {
       console.error("User error in middleware:", userResult.error)
     }
@@ -58,7 +60,7 @@ export async function middleware(request: NextRequest) {
     console.error("Middleware auth error:", error)
     // AuthSessionMissingError는 정상적인 상황이므로 무시
     if (error instanceof Error && error.name === 'AuthSessionMissingError') {
-      console.log("No session/user found in middleware (normal for unauthenticated users)")
+      console.log(`No session/user found in middleware for ${pathname} (normal for unauthenticated users)`)
     }
   }
 
@@ -66,8 +68,6 @@ export async function middleware(request: NextRequest) {
   if (session && !user) {
     console.log("Session exists but no user found in middleware")
   }
-
-  const { pathname } = request.nextUrl
 
   // 데모 계정 세션 확인 (localStorage는 서버에서 접근 불가하므로 쿠키나 헤더 확인)
   const demoUserCookie = request.cookies.get('demoUser')?.value

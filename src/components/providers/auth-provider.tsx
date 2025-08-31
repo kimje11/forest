@@ -266,12 +266,24 @@ export default function AuthProvider({
         // 데모 계정 로그아웃 - localStorage와 쿠키 정리
         localStorage.removeItem('demoUser');
         
-        // 쿠키 삭제 (여러 방법으로 확실히 삭제)
-        document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0';
-        document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0; domain=' + window.location.hostname;
+        // 쿠키 삭제 (모든 브라우저에서 확실히 삭제되도록)
+        const cookiesToDelete = [
+          'demoUser',
+          'sb-access-token',
+          'sb-refresh-token',
+          'supabase-auth-token'
+        ];
+        
+        cookiesToDelete.forEach(cookieName => {
+          document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0`;
+          document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0; domain=${window.location.hostname}`;
+          document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0; domain=.${window.location.hostname}`;
+        });
         
         // 사용자 상태 즉시 초기화
         setUser(null);
+        setLoading(false);
+        setIsInitialized(true);
         
         // 서버에 로그아웃 요청도 보내기
         try {
@@ -283,6 +295,8 @@ export default function AuthProvider({
           console.log('Server logout request failed, but local logout succeeded');
         }
         
+        // 페이지 새로고침으로 모든 상태 초기화
+        window.location.href = '/auth/login';
         return;
       }
       

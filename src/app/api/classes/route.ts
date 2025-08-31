@@ -6,6 +6,15 @@ export async function GET(request: NextRequest) {
   try {
     console.log("Classes API called");
     
+    // DATABASE_URL 확인
+    if (!process.env.DATABASE_URL) {
+      console.error("DATABASE_URL not configured");
+      return NextResponse.json(
+        { error: "데이터베이스 연결이 설정되지 않았습니다." },
+        { status: 500 }
+      );
+    }
+    
     // 데모 계정을 포함한 인증
     const user = await requireAuthWithDemo(request);
 
@@ -19,172 +28,83 @@ export async function GET(request: NextRequest) {
     
     console.log("User authenticated:", user.email, user.role);
 
-    // 데모 계정도 실제 데이터베이스 사용
-    if (false) { // 더 이상 하드코딩된 데이터를 사용하지 않음
-      let classes = [];
+    // 실제 데이터베이스 사용
+    let classes = [];
 
+    try {
       if (user.role === "TEACHER") {
-        // 교사별 클래스 데이터
-        const teacherClasses = {
-          'demo-teacher-physics': [
-            {
-              id: 'demo-class-physics-1',
-              name: '물리학 실험반',
-              description: '고등학교 물리 실험 수업',
-              classCode: 'PHY001',
-              teacherId: user.id,
-              _count: {
-                enrollments: 25,
-                projects: 15
+        // 교사가 개설한 클래스 목록
+        classes = await prisma.class.findMany({
+          where: { teacherId: user.id },
+          include: {
+            _count: {
+              select: {
+                enrollments: true,
+                projects: true,
               },
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-          ],
-          'demo-teacher-chemistry': [
-            {
-              id: 'demo-class-chemistry-1',
-              name: '화학 탐구반',
-              description: '고등학교 화학 탐구 수업',
-              classCode: 'CHE001',
-              teacherId: user.id,
-              _count: {
-                enrollments: 28,
-                projects: 18
-              },
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-          ],
-          'demo-teacher-math': [
-            {
-              id: 'demo-class-math-1',
-              name: '수학 탐구반',
-              description: '고등학교 수학 탐구 수업',
-              classCode: 'MAT001',
-              teacherId: user.id,
-              _count: {
-                enrollments: 30,
-                projects: 12
-              },
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-          ]
-        };
-
-        classes = teacherClasses[user.id] || [];
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        });
       } else if (user.role === "STUDENT") {
         // 학생이 참여한 클래스 목록
-        classes = [
-          {
-            id: 'demo-class-physics-1',
-            name: '물리학 실험반',
-            description: '고등학교 물리 실험 수업',
-            classCode: 'PHY001',
-            teacherId: 'demo-teacher-physics',
-            teacher: {
-              id: 'demo-teacher-physics',
-              name: '김물리'
+        const enrollments = await prisma.classEnrollment.findMany({
+          where: { studentId: user.id },
+          include: {
+            class: {
+              include: {
+                teacher: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                _count: {
+                  select: {
+                    enrollments: true,
+                  },
+                },
+              },
             },
-            enrollmentDate: new Date().toISOString(),
-            _count: {
-              enrollments: 25,
-              projects: 3 // 해당 학생의 프로젝트 수
-            },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
           },
-          {
-            id: 'demo-class-chemistry-1',
-            name: '화학 탐구반',
-            description: '고등학교 화학 탐구 수업',
-            classCode: 'CHE001',
-            teacherId: 'demo-teacher-chemistry',
-            teacher: {
-              id: 'demo-teacher-chemistry',
-              name: '이화학'
-            },
-            enrollmentDate: new Date().toISOString(),
-            _count: {
-              enrollments: 28,
-              projects: 2 // 해당 학생의 프로젝트 수
-            },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ];
+          orderBy: { createdAt: "desc" },
+        });
+
+        // 각 클래스별로 해당 학생의 프로젝트 개수를 별도로 계산
+        const classesWithProjectCount = await Promise.all(
+          enrollments.map(async (enrollment) => {
+            const projectCount = await prisma.project.count({
+              where: {
+                studentId: user.id,
+                classId: enrollment.class.id,
+              },
+            });
+
+            return {
+              ...enrollment.class,
+              enrollmentDate: enrollment.createdAt,
+              _count: {
+                ...enrollment.class._count,
+                projects: projectCount,
+              },
+            };
+          })
+        );
+
+        classes = classesWithProjectCount;
       }
 
       return NextResponse.json({ classes }, { status: 200 });
-    }
-
-    // 실제 데이터베이스 사용 (정상적인 환경에서)
-    let classes = [];
-
-    if (user.role === "TEACHER") {
-      // 교사가 개설한 클래스 목록
-      classes = await prisma.class.findMany({
-        where: { teacherId: user.id },
-        include: {
-          _count: {
-            select: {
-              enrollments: true,
-              projects: true,
-            },
-          },
+    } catch (prismaError) {
+      console.error("Prisma database error:", prismaError);
+      return NextResponse.json(
+        { 
+          error: "데이터베이스 연결 오류가 발생했습니다.",
+          details: process.env.NODE_ENV === 'development' ? String(prismaError) : undefined
         },
-        orderBy: { createdAt: "desc" },
-      });
-    } else if (user.role === "STUDENT") {
-      // 학생이 참여한 클래스 목록
-      const enrollments = await prisma.classEnrollment.findMany({
-        where: { studentId: user.id },
-        include: {
-          class: {
-            include: {
-              teacher: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-              _count: {
-                select: {
-                  enrollments: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-
-      // 각 클래스별로 해당 학생의 프로젝트 개수를 별도로 계산
-      const classesWithProjectCount = await Promise.all(
-        enrollments.map(async (enrollment) => {
-          const projectCount = await prisma.project.count({
-            where: {
-              studentId: user.id,
-              classId: enrollment.class.id,
-            },
-          });
-
-          return {
-            ...enrollment.class,
-            enrollmentDate: enrollment.createdAt,
-            _count: {
-              ...enrollment.class._count,
-              projects: projectCount,
-            },
-          };
-        })
+        { status: 500 }
       );
-
-      classes = classesWithProjectCount;
     }
-
-    return NextResponse.json({ classes }, { status: 200 });
   } catch (error) {
     console.error("Get classes error:", error);
     console.error("Error details:", {

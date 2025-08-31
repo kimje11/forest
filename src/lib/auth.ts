@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getCurrentUser() {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     
     const {
       data: { user: authUser },
