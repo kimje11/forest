@@ -375,6 +375,24 @@ function LoginFormContent() {
                       </button>
                     </div>
                   </div>
+                  <div className="bg-white p-3 rounded border hover:shadow-sm transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-green-700 mb-1">👨‍🎓 학생6</div>
+                        <div className="text-gray-600">student6@demo.com</div>
+                        <div className="text-gray-600">비밀번호: 123</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFormData({ email: 'student6@demo.com', password: '123' });
+                          setErrors({});
+                        }}
+                        className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded transition-colors"
+                      >
+                        사용하기
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
