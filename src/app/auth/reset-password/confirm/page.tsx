@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
-export default function ResetPasswordConfirmPage() {
+function ResetPasswordConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
@@ -212,6 +212,40 @@ export default function ResetPasswordConfirmPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// 로딩 컴포넌트
+function ResetPasswordConfirmLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              새 비밀번호 설정
+            </CardTitle>
+            <CardDescription>
+              로딩 중...
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// 메인 컴포넌트 (Suspense 경계 포함)
+export default function ResetPasswordConfirmPage() {
+  return (
+    <Suspense fallback={<ResetPasswordConfirmLoading />}>
+      <ResetPasswordConfirmContent />
+    </Suspense>
   );
 }
 
