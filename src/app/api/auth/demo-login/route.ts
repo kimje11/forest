@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { createClient } from '@/lib/supabase';
-import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
     console.log("Demo login API called");
-    console.log("Environment:", process.env.NODE_ENV);
-    console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
-    console.log("VERCEL:", process.env.VERCEL);
-    console.log("VERCEL_ENV:", process.env.VERCEL_ENV);
     
     const { email, password } = await request.json();
 
@@ -112,106 +103,16 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    let user = null;
-    
-    // 1. Supabase Auth 시도 (선택적)
-    try {
-      const supabase = createClient();
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (!authError && authData.user) {
-        console.log("Supabase Auth successful:", authData.user.email);
-        user = {
-          id: authData.user.id,
-          email: authData.user.email!,
-          name: userData.name,
-          role: userData.role
-        };
-      } else {
-        console.log("Supabase Auth failed or not available, using fallback");
-      }
-    } catch (supabaseError) {
-      console.log("Supabase Auth error:", supabaseError);
-    }
-    
-    // 2. Prisma 데이터베이스 시도 (선택적)
-    if (!user && process.env.DATABASE_URL) {
-      try {
-        await prisma.$connect();
-        console.log("Database connection successful");
-        
-        // 기존 사용자 확인
-        const dbUser = await prisma.user.findUnique({
-          where: { email }
-        });
-        
-        if (dbUser) {
-          // 데이터베이스에 사용자가 있으면 비밀번호 검증
-          const isValidPassword = await bcrypt.compare(password, dbUser.password);
-          if (isValidPassword) {
-            user = {
-              id: dbUser.id,
-              email: dbUser.email,
-              name: dbUser.name,
-              role: dbUser.role
-            };
-            console.log(`Database user authenticated: ${user.name}`);
-          }
-        } else {
-          // 데이터베이스에 사용자가 없으면 생성 시도
-          try {
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = await prisma.user.create({
-              data: {
-                id: userData.id,
-                email: userData.email,
-                name: userData.name,
-                password: hashedPassword,
-                role: userData.role as any,
-              }
-            });
-            
-            user = {
-              id: newUser.id,
-              email: newUser.email,
-              name: newUser.name,
-              role: newUser.role
-            };
-            
-            console.log(`New user created in database: ${user.name}`);
-          } catch (createError) {
-            console.log("Failed to create user in database:", createError);
-          }
-        }
-      } catch (dbError) {
-        console.log("Database error:", dbError);
-      }
-    }
-    
-    // 3. Fallback: 하드코딩된 사용자 정보 사용
-    if (!user) {
-      console.log("Using fallback demo user data");
-      user = {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role
-      };
-    }
-
     console.log(`Login successful for ${email}`);
 
     // 성공적인 로그인 - 쿠키 설정
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role
       }
     });
 
@@ -231,10 +132,10 @@ export async function POST(request: NextRequest) {
     };
     
     response.cookies.set('demoUser', JSON.stringify({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role
     }), cookieOptions);
 
     console.log("Cookie set successfully");
@@ -255,11 +156,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    try {
-      await prisma.$disconnect();
-    } catch (disconnectError) {
-      console.error('Prisma disconnect error:', disconnectError);
-    }
   }
 }
