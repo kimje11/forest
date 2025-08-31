@@ -250,7 +250,7 @@ export default function ProjectFeedbackPage({ params }: { params: Promise<{ id: 
                 
                 {component.type === "FILE_UPLOAD" ? (
                   renderFileContent(value)
-                ) : component.type === "TEXTAREA" ? (
+                ) : (component.type === "TEXTAREA" || component.type === "MATH_EDITOR") ? (
                   // Math Editor 감지를 위한 플레이스홀더 확인
                   component.placeholder?.includes("Math Editor") || 
                   component.placeholder?.includes("수학 수식, 표, 이미지") ? (

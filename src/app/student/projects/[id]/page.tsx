@@ -330,7 +330,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           />
         );
 
-      case "TEXTAREA":
+              case "TEXTAREA":
+        case "MATH_EDITOR":
         // Math Editor를 위한 특별한 플레이스홀더 감지
         const isMathEditor = component.placeholder?.includes("Math Editor") || 
                            component.placeholder?.includes("수학 수식, 표, 이미지");

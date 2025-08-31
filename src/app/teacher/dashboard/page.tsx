@@ -35,6 +35,9 @@ export default function TeacherDashboard() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
+    // 페이지 로드 시 스크롤을 맨 위로 이동
+    window.scrollTo(0, 0);
+    
     // 인증 로딩 중이면 아무것도 하지 않음
     if (authLoading) {
       console.log("Auth loading, waiting...");
@@ -105,6 +108,16 @@ export default function TeacherDashboard() {
     }
   };
 
+  // 데이터 로딩이 완료된 후 스크롤을 맨 위로 이동
+  useEffect(() => {
+    if (!authLoading && user && classes.length > 0) {
+      // 약간의 지연을 두어 DOM이 완전히 렌더링된 후 스크롤 조정
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+      }, 100);
+    }
+  }, [authLoading, user, classes.length]);
+
   const handleCopyCode = async (classCode: string) => {
     await navigator.clipboard.writeText(classCode);
     setCopiedCode(classCode);
@@ -160,30 +173,46 @@ export default function TeacherDashboard() {
         subtitle={`안녕하세요, ${safeUserName((user as any)?.name || user?.email, '선생님')}님! 탐구 템플릿을 만들고 학생들의 탐구 활동을 관리해보세요.`}
       />
       
-      {/* 추가 기능 버튼들 */}
+      {/* 헤더 섹션 */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4">
-            <div className="flex justify-end gap-4">
-              <FeatureNote
-                title="교사 대시보드 사용법"
-                description="교사용 주요 기능들을 안내합니다"
-                details={[
-                  "클래스 관리: 새로운 클래스를 생성하고 학생들을 초대할 수 있습니다",
-                  "템플릿 제작: AI 도우미를 활용하여 탐구 활동 템플릿을 만들 수 있습니다",
-                  "학습 모니터링: 학생들의 탐구 진행 상황과 제출 현황을 확인할 수 있습니다",
-                  "피드백 제공: 학생들의 탐구 활동에 대한 개별 피드백을 제공할 수 있습니다"
-                ]}
-                className="shrink-0"
-              />
-              <Button
-                onClick={() => setShowPasswordModal(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                개인정보 수정
-              </Button>
+          <div className="py-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              {/* 왼쪽: 환영 메시지 */}
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                  교사 대시보드에 오신 것을 환영합니다!
+                </h2>
+                <p className="text-sm text-gray-600">
+                  학생들의 탐구 활동을 효과적으로 관리하고 지도해보세요
+                </p>
+              </div>
+              
+              {/* 오른쪽: 기능 버튼들 */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <FeatureNote
+                  title="교사 대시보드 사용법"
+                  description="교사용 주요 기능들을 안내합니다"
+                  details={[
+                    "🏫 클래스 관리: 새로운 클래스를 생성하고 참여 코드를 통해 학생들을 초대할 수 있습니다",
+                    "📋 템플릿 제작: 드래그 앤 드롭으로 탐구 활동 템플릿을 만들고 단계별 컴포넌트를 구성할 수 있습니다",
+                    "👥 학생 관리: 클래스별 학생 목록을 확인하고 개별 학생의 탐구 진행 상황을 모니터링할 수 있습니다",
+                    "📊 프로젝트 현황: 초안, 진행중, 완료, 제출 상태별로 학생들의 탐구 프로젝트 현황을 확인할 수 있습니다",
+                    "💬 피드백 제공: 학생들의 탐구 활동에 대한 개별 피드백을 단계별로 제공할 수 있습니다",
+                    "✏️ 수식 편집기: 피드백 작성 시 수학 수식, 표, 이미지를 포함한 풍부한 내용을 작성할 수 있습니다",
+                    "⚙️ 개인정보 관리: 이름과 비밀번호를 안전하게 수정할 수 있습니다"
+                  ]}
+                  className="shrink-0"
+                />
+                <Button
+                  onClick={() => setShowPasswordModal(true)}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  개인정보 수정
+                </Button>
+              </div>
             </div>
           </div>
         </div>

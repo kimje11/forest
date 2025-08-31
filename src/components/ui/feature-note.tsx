@@ -22,7 +22,7 @@ export default function FeatureNote({ title, description, details, className }: 
         variant="outline"
         size="sm"
         onClick={() => setIsOpen(true)}
-        className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+        className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 border-blue-200 shadow-sm hover:shadow-md transition-all duration-200"
       >
         <HelpCircle className="h-4 w-4 mr-1" />
         기능 안내

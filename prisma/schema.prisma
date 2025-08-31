@@ -23,6 +23,7 @@ enum ProjectStatus {
 enum ComponentType {
   TEXT
   TEXTAREA
+  MATH_EDITOR
   FILE_UPLOAD
   MULTIPLE_CHOICE
   CHECKBOX

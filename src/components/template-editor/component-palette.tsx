@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useDrag } from "react-dnd";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -10,10 +11,10 @@ import {
   Circle, 
   Brain,
   GripVertical,
-  Calculator,
-  Table
+  Calculator
 } from "lucide-react";
-export type ComponentType = "TEXT" | "TEXTAREA" | "FILE_UPLOAD" | "MULTIPLE_CHOICE" | "CHECKBOX" | "AI_TOPIC_HELPER";
+
+export type ComponentType = "TEXT" | "TEXTAREA" | "MATH_EDITOR" | "FILE_UPLOAD" | "MULTIPLE_CHOICE" | "CHECKBOX" | "AI_TOPIC_HELPER";
 
 interface ComponentItem {
   type: ComponentType;
@@ -52,7 +53,7 @@ const componentItems: ComponentItem[] = [
     },
   },
   {
-    type: "TEXTAREA",
+    type: "MATH_EDITOR",
     label: "수식 및 표 입력",
     description: "수학 수식, 표, 이미지가 포함된 내용 입력",
     icon: Calculator,
@@ -125,7 +126,7 @@ function DraggableComponent({ item }: DraggableComponentProps) {
 
   return (
     <div
-      ref={drag}
+      ref={drag as any}
       className={`cursor-move transition-opacity ${
         isDragging ? "opacity-50" : "opacity-100"
       }`}
@@ -158,8 +159,8 @@ export default function ComponentPalette() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {componentItems.map((item) => (
-          <DraggableComponent key={item.type} item={item} />
+        {componentItems.map((item, index) => (
+          <DraggableComponent key={`${item.type}-${index}`} item={item} />
         ))}
       </CardContent>
     </Card>

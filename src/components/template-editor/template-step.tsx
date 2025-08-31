@@ -71,7 +71,7 @@ function ComponentEditor({
       required: formData.required,
     };
 
-    if (component.type === "TEXT" || component.type === "TEXTAREA") {
+    if (component.type === "TEXT" || component.type === "TEXTAREA" || component.type === "MATH_EDITOR") {
       updates.placeholder = formData.placeholder;
     }
 
@@ -142,7 +142,7 @@ function ComponentEditor({
         </div>
       </div>
 
-      {(component.type === "TEXT" || component.type === "TEXTAREA") && (
+      {(component.type === "TEXT" || component.type === "TEXTAREA" || component.type === "MATH_EDITOR") && (
         <div className="space-y-2">
           <label className="text-xs font-medium">플레이스홀더</label>
           <div className="flex gap-2">

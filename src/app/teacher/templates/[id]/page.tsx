@@ -134,7 +134,8 @@ export default function TemplateDetailPage({ params }: { params: Promise<{ id: s
   const getComponentTypeLabel = (type: string) => {
     switch (type) {
       case "TEXT": return "단문 입력";
-      case "TEXTAREA": return "장문 입력";
+              case "TEXTAREA": return "장문 입력";
+        case "MATH_EDITOR": return "수식 편집기";
       case "FILE_UPLOAD": return "파일 업로드";
       case "MULTIPLE_CHOICE": return "선택형";
       case "CHECKBOX": return "체크박스";
@@ -146,7 +147,8 @@ export default function TemplateDetailPage({ params }: { params: Promise<{ id: s
   const getComponentTypeColor = (type: string) => {
     switch (type) {
       case "TEXT": return "bg-blue-100 text-blue-800";
-      case "TEXTAREA": return "bg-green-100 text-green-800";
+              case "TEXTAREA": return "bg-green-100 text-green-800";
+        case "MATH_EDITOR": return "bg-purple-100 text-purple-800";
       case "FILE_UPLOAD": return "bg-purple-100 text-purple-800";
       case "MULTIPLE_CHOICE": return "bg-orange-100 text-orange-800";
       case "CHECKBOX": return "bg-pink-100 text-pink-800";

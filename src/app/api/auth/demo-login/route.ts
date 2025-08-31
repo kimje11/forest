@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
         });
         console.log("Database query result:", user ? "User found" : "User not found");
         
-        // 사용자가 데이터베이스에 없으면 생성
+        // 사용자가 데이터베이스에 없으면 생성하고 관련 데이터도 함께 생성
         if (!user) {
-          console.log("Creating demo user in database...");
+          console.log("Creating demo user and related data in database...");
           const demoUserData: Record<string, any> = {
             'math@demo.com': {
               id: 'demo-teacher-math',
@@ -115,16 +115,166 @@ export async function POST(request: NextRequest) {
           
           const userData = demoUserData[email as keyof typeof demoUserData];
           if (userData) {
-            user = await prisma.user.create({
-              data: {
-                id: userData.id,
-                email: userData.email,
-                name: userData.name,
-                password: userData.password,
-                role: userData.role as any,
+            // 트랜잭션으로 사용자와 관련 데이터를 함께 생성
+            user = await prisma.$transaction(async (tx) => {
+              // 사용자 생성
+              const newUser = await tx.user.create({
+                data: {
+                  id: userData.id,
+                  email: userData.email,
+                  name: userData.name,
+                  password: userData.password,
+                  role: userData.role as any,
+                }
+              });
+
+              // 교사인 경우 클래스와 템플릿 생성
+              if (userData.role === 'TEACHER') {
+                // 기본 템플릿도 함께 생성 (모든 사용자가 사용할 수 있도록)
+                const defaultTemplate = await tx.template.upsert({
+                  where: { id: 'demo-template-default' },
+                  update: {},
+                  create: {
+                    id: 'demo-template-default',
+                    title: '자유 탐구 템플릿',
+                    description: '학생들이 자유롭게 탐구할 수 있는 기본 템플릿입니다.',
+                    isDefault: true,
+                    teacherId: 'demo-teacher-math'
+                  }
+                });
+
+                // 기본 템플릿의 단계와 컴포넌트 생성
+                const defaultStep = await tx.templateStep.upsert({
+                  where: { id: 'demo-step-default' },
+                  update: {},
+                  create: {
+                    id: 'demo-step-default',
+                    title: '탐구 주제 선정',
+                    description: '관심 있는 탐구 주제를 선정해보세요.',
+                    order: 1,
+                    isRequired: true,
+                    templateId: defaultTemplate.id
+                  }
+                });
+
+                await tx.templateComponent.upsert({
+                  where: { id: 'demo-comp-default' },
+                  update: {},
+                  create: {
+                    id: 'demo-comp-default',
+                    type: 'TEXTAREA' as any,
+                    label: '탐구 주제',
+                    placeholder: '탐구하고 싶은 주제를 입력하세요',
+                    required: true,
+                    order: 1,
+                    stepId: defaultStep.id
+                  }
+                });
+                const classData = {
+                  'demo-teacher-math': {
+                    id: 'demo-class-math-1',
+                    name: '수학 탐구반',
+                    description: '수학적 사고력을 기르는 탐구 수업',
+                    classCode: 'MATH01',
+                    teacherId: userData.id
+                  },
+                  'demo-teacher-chemistry': {
+                    id: 'demo-class-chemistry-1',
+                    name: '화학 실험반',
+                    description: '화학 실험을 통한 과학적 탐구',
+                    classCode: 'CHEM01',
+                    teacherId: userData.id
+                  },
+                  'demo-teacher-physics': {
+                    id: 'demo-class-physics-1',
+                    name: '물리 실험반',
+                    description: '물리 원리를 실험으로 이해하기',
+                    classCode: 'PHYS01',
+                    teacherId: userData.id
+                  }
+                };
+
+                const classInfo = classData[userData.id as keyof typeof classData];
+                if (classInfo) {
+                  await tx.class.upsert({
+                    where: { id: classInfo.id },
+                    update: {},
+                    create: classInfo
+                  });
+                }
+
+                // 기본 템플릿 생성
+                const template = await tx.template.upsert({
+                  where: { id: `demo-template-${userData.id}` },
+                  update: {},
+                  create: {
+                    id: `demo-template-${userData.id}`,
+                    title: `${userData.name}의 탐구 템플릿`,
+                    description: `${userData.name} 교사가 만든 기본 탐구 템플릿입니다.`,
+                    isDefault: false,
+                    teacherId: userData.id
+                  }
+                });
+
+                // 템플릿 단계 생성
+                const step = await tx.templateStep.upsert({
+                  where: { id: `demo-step-${userData.id}` },
+                  update: {},
+                  create: {
+                    id: `demo-step-${userData.id}`,
+                    title: '탐구 주제 선정',
+                    description: '관심 있는 탐구 주제를 선정해보세요.',
+                    order: 1,
+                    isRequired: true,
+                    templateId: template.id
+                  }
+                });
+
+                // 템플릿 컴포넌트 생성
+                await tx.templateComponent.upsert({
+                  where: { id: `demo-comp-${userData.id}` },
+                  update: {},
+                  create: {
+                    id: `demo-comp-${userData.id}`,
+                    type: 'TEXTAREA' as any,
+                    label: '탐구 주제',
+                    placeholder: '탐구하고 싶은 주제를 입력하세요',
+                    required: true,
+                    order: 1,
+                    stepId: step.id
+                  }
+                });
               }
+
+              // 학생들을 클래스에 등록
+              if (userData.role === 'STUDENT') {
+                const enrollments = [
+                  { studentId: 'demo-student-1', classId: 'demo-class-math-1' },
+                  { studentId: 'demo-student-2', classId: 'demo-class-math-1' },
+                  { studentId: 'demo-student-3', classId: 'demo-class-chemistry-1' },
+                  { studentId: 'demo-student-4', classId: 'demo-class-physics-1' }
+                ];
+
+                for (const enrollment of enrollments) {
+                  if (enrollment.studentId === userData.id) {
+                    await tx.classEnrollment.upsert({
+                      where: {
+                        studentId_classId: {
+                          studentId: enrollment.studentId,
+                          classId: enrollment.classId
+                        }
+                      },
+                      update: {},
+                      create: enrollment
+                    });
+                    break;
+                  }
+                }
+              }
+
+              return newUser;
             });
-            console.log("Demo user created in database:", user.name);
+            console.log("Demo user and related data created in database:", user.name);
           }
         }
       } catch (dbError) {

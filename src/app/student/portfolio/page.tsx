@@ -18,7 +18,10 @@ import {
   Eye,
   BarChart3,
   PieChart as PieChartIcon,
-  Target
+  Target,
+  Clock,
+  CheckCircle,
+  Send
 } from "lucide-react";
 import { BarChart, PieChart, useChartRegistration } from "@/components/charts/dynamic-chart";
 
@@ -30,6 +33,7 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   template: {
+    id: string;
     title: string;
     description?: string;
     steps?: any[];
@@ -119,6 +123,171 @@ export default function PortfolioPage() {
       `<div class="short-text-content">${html}</div>`;
   }, []);
 
+  // 상태별 프로젝트 분류
+  const projectStats = useMemo(() => {
+    const stats = {
+      inProgress: projects.filter(p => p.status === "DRAFT" || p.status === "IN_PROGRESS"),
+      completed: projects.filter(p => p.status === "COMPLETED"),
+      submitted: projects.filter(p => p.status === "SUBMITTED"),
+      all: projects
+    };
+    return stats;
+  }, [projects]);
+
+  // 상태별 텍스트 및 색상
+  const getStatusInfo = useCallback((status: string) => {
+    switch (status) {
+      case "DRAFT":
+        return { text: "초안", color: "bg-gray-100 text-gray-800", icon: Clock };
+      case "IN_PROGRESS":
+        return { text: "진행중", color: "bg-blue-100 text-blue-800", icon: Target };
+      case "COMPLETED":
+        return { text: "완료", color: "bg-green-100 text-green-800", icon: CheckCircle };
+      case "SUBMITTED":
+        return { text: "제출됨", color: "bg-purple-100 text-purple-800", icon: Send };
+      default:
+        return { text: "알 수 없음", color: "bg-gray-100 text-gray-800", icon: Clock };
+    }
+  }, []);
+
+  // 기존 함수들 (호환성을 위해 유지)
+  const getStatusText = useCallback((status: string) => {
+    return getStatusInfo(status).text;
+  }, [getStatusInfo]);
+
+  const getStatusColor = useCallback((status: string) => {
+    return getStatusInfo(status).color;
+  }, [getStatusInfo]);
+
+  // 개별 프로젝트 출력
+  const exportSingleProject = useCallback(async (project: Project) => {
+    try {
+      const projectData = {
+        student: {
+          name: user?.name || "학생",
+          email: user?.email || "",
+          exportDate: new Date().toLocaleDateString('ko-KR')
+        },
+        project: {
+          ...project,
+          status: getStatusText(project.status),
+          title: project.title || project.template.title,
+          templateTitle: project.template.title,
+          description: project.template.description || "",
+          grade: project.grade || "미평가",
+          createdAt: new Date(project.createdAt).toLocaleDateString('ko-KR'),
+          updatedAt: new Date(project.updatedAt).toLocaleDateString('ko-KR'),
+          inputs: project.inputs || [],
+          feedbacks: project.feedbacks || []
+        }
+      };
+
+      // HTML 보고서 생성
+      const htmlContent = generateSingleProjectHTML(projectData);
+      
+      // 새 창에서 PDF 인쇄 대화상자 열기
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.focus();
+        
+        // 인쇄 대화상자 열기
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+    } catch (error) {
+      console.error("프로젝트 출력 오류:", error);
+      alert("프로젝트 출력 중 오류가 발생했습니다.");
+    }
+  }, [user, getStatusText]);
+
+  // 월별 데이터 생성
+  const monthlyData = useCallback(() => {
+    const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+    const data = new Array(12).fill(0);
+    
+    projectStats.completed.forEach(project => {
+      const month = new Date(project.updatedAt).getMonth();
+      data[month]++;
+    });
+    
+    return {
+      labels: months,
+      datasets: [{
+        label: '완료된 탐구',
+        data: data,
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        borderColor: 'rgba(59, 130, 246, 1)',
+        borderWidth: 1
+      }]
+    };
+  }, [projectStats.completed]);
+
+  // 분야별 데이터 생성
+  const subjectData = useCallback(() => {
+    const subjectCount: Record<string, number> = {};
+    
+    projectStats.completed.forEach(project => {
+      const subject = project.template.title.split(" ")[0] || "기타";
+      subjectCount[subject] = (subjectCount[subject] || 0) + 1;
+    });
+    
+    const colors = [
+      'rgba(59, 130, 246, 0.8)',   // blue
+      'rgba(16, 185, 129, 0.8)',   // green
+      'rgba(245, 158, 11, 0.8)',   // yellow
+      'rgba(239, 68, 68, 0.8)',    // red
+      'rgba(139, 92, 246, 0.8)',   // purple
+      'rgba(236, 72, 153, 0.8)',   // pink
+    ];
+    
+    return {
+      labels: Object.keys(subjectCount),
+      datasets: [{
+        data: Object.values(subjectCount),
+        backgroundColor: colors.slice(0, Object.keys(subjectCount).length),
+        borderWidth: 1
+      }]
+    };
+  }, [projectStats.completed]);
+
+  // 템플릿별 그룹화
+  const projectsByTemplate = useMemo(() => {
+    const grouped = {
+      inProgress: {} as Record<string, Project[]>,
+      completed: {} as Record<string, Project[]>,
+      submitted: {} as Record<string, Project[]>
+    };
+
+    projectStats.inProgress.forEach(project => {
+      const templateId = project.template.id;
+      if (!grouped.inProgress[templateId]) {
+        grouped.inProgress[templateId] = [];
+      }
+      grouped.inProgress[templateId].push(project);
+    });
+
+    projectStats.completed.forEach(project => {
+      const templateId = project.template.id;
+      if (!grouped.completed[templateId]) {
+        grouped.completed[templateId] = [];
+      }
+      grouped.completed[templateId].push(project);
+    });
+
+    projectStats.submitted.forEach(project => {
+      const templateId = project.template.id;
+      if (!grouped.submitted[templateId]) {
+        grouped.submitted[templateId] = [];
+      }
+      grouped.submitted[templateId].push(project);
+    });
+
+    return grouped;
+  }, [projectStats]);
+
   const exportPortfolio = useCallback(async () => {
     try {
       // 포트폴리오 데이터 준비
@@ -130,13 +299,13 @@ export default function PortfolioPage() {
         },
         summary: {
           totalProjects: projects.length,
-          completedProjects: projects.filter(p => p.status === "COMPLETED").length,
-          submittedProjects: projects.filter(p => p.status === "SUBMITTED").length,
-          inProgressProjects: projects.filter(p => p.status === "IN_PROGRESS" || p.status === "DRAFT").length,
+          completedProjects: projectStats.completed.length,
+          submittedProjects: projectStats.submitted.length,
+          inProgressProjects: projectStats.inProgress.length,
         },
         projects: projects.map(project => ({
           title: project.title || project.template.title,
-          status: getStatusText(project.status),
+          status: getStatusInfo(project.status).text,
           templateTitle: project.template.title,
           description: project.template.description || "",
           grade: project.grade || "미평가",
@@ -166,7 +335,7 @@ export default function PortfolioPage() {
       console.error("포트폴리오 내보내기 오류:", error);
       alert("포트폴리오 내보내기 중 오류가 발생했습니다.");
     }
-  }, [user, projects]);
+  }, [user, projects, projectStats, getStatusInfo]);
 
   const generateSingleProjectHTML = (data: any) => {
     const { student, project } = data;
@@ -692,132 +861,10 @@ export default function PortfolioPage() {
     `;
   };
 
-  const completedProjects = useMemo(() => 
-    projects.filter(p => p.status === "COMPLETED"), 
-    [projects]
-  );
-  
   const inProgressProjects = useMemo(() => 
     projects.filter(p => p.status === "IN_PROGRESS" || p.status === "DRAFT"), 
     [projects]
   );
-
-  // 월별 프로젝트 완료 데이터
-  const monthlyData = useCallback(() => {
-    const months = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
-    const monthlyCounts = new Array(12).fill(0);
-    
-    completedProjects.forEach(project => {
-      const month = new Date(project.updatedAt).getMonth();
-      monthlyCounts[month]++;
-    });
-
-    return {
-      labels: months,
-      datasets: [
-        {
-          label: "완료된 탐구",
-          data: monthlyCounts,
-          backgroundColor: "rgba(59, 130, 246, 0.5)",
-          borderColor: "rgb(59, 130, 246)",
-          borderWidth: 1,
-        },
-      ],
-    };
-  }, [completedProjects]);
-
-  // 교과목별 분포 데이터
-  const subjectData = useCallback(() => {
-    const subjectCounts: Record<string, number> = {};
-    
-    completedProjects.forEach(project => {
-      const subject = project.template.title.split(" ")[0] || "기타";
-      subjectCounts[subject] = (subjectCounts[subject] || 0) + 1;
-    });
-
-    const colors = [
-      "rgba(239, 68, 68, 0.8)",
-      "rgba(34, 197, 94, 0.8)", 
-      "rgba(59, 130, 246, 0.8)",
-      "rgba(249, 115, 22, 0.8)",
-      "rgba(168, 85, 247, 0.8)",
-      "rgba(236, 72, 153, 0.8)",
-    ];
-
-    return {
-      labels: Object.keys(subjectCounts),
-      datasets: [
-        {
-          data: Object.values(subjectCounts),
-          backgroundColor: colors.slice(0, Object.keys(subjectCounts).length),
-        },
-      ],
-    };
-  }, [completedProjects]);
-
-  const getStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case "COMPLETED": return "bg-green-100 text-green-800";
-      case "IN_PROGRESS": return "bg-blue-100 text-blue-800";
-      case "SUBMITTED": return "bg-purple-100 text-purple-800";
-      case "DRAFT": return "bg-blue-100 text-blue-800"; // 진행중과 동일한 색상
-      default: return "bg-gray-100 text-gray-800";
-    }
-  }, []);
-
-  const getStatusText = useCallback((status: string) => {
-    switch (status) {
-      case "COMPLETED": return "완료";
-      case "IN_PROGRESS": return "진행중";
-      case "SUBMITTED": return "제출됨";
-      case "DRAFT": return "진행중";
-      default: return status;
-    }
-  }, []);
-
-  const exportSingleProject = useCallback(async (project: Project) => {
-    try {
-      // 단일 프로젝트 데이터 준비
-      const projectData = {
-        student: {
-          name: user?.name || "학생",
-          email: user?.email || "",
-          exportDate: new Date().toLocaleDateString('ko-KR')
-        },
-        project: {
-          title: project.title || project.template.title,
-          status: getStatusText(project.status),
-          templateTitle: project.template.title,
-          description: project.template.description || "",
-          grade: project.grade || "미평가",
-          createdAt: new Date(project.createdAt).toLocaleDateString('ko-KR'),
-          updatedAt: new Date(project.updatedAt).toLocaleDateString('ko-KR'),
-          template: project.template,
-          inputs: project.inputs || [],
-          feedbacks: project.feedbacks || []
-        }
-      };
-
-      // HTML 보고서 생성
-      const htmlContent = generateSingleProjectHTML(projectData);
-      
-      // 새 창에서 PDF 인쇄 대화상자 열기
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        printWindow.focus();
-        
-        // 인쇄 대화상자 열기
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      }
-    } catch (error) {
-      console.error("프로젝트 출력 오류:", error);
-      alert("프로젝트 출력 중 오류가 발생했습니다.");
-    }
-  }, [user, getStatusText]);
 
   const filteredProjects = useMemo(() => 
     selectedFilter === "all" 
@@ -877,42 +924,40 @@ export default function PortfolioPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">완료된 탐구</CardTitle>
-              <Trophy className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{completedProjects.length}</div>
-              <p className="text-xs text-muted-foreground">개</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">진행 중인 탐구</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
+              <Target className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{inProgressProjects.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{projectStats.inProgress.length}</div>
               <p className="text-xs text-muted-foreground">개</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">받은 피드백</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">완료된 탐구</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {projects.reduce((total, project) => total + project.feedbacks.length, 0)}
-              </div>
+              <div className="text-2xl font-bold text-green-600">{projectStats.completed.length}</div>
+              <p className="text-xs text-muted-foreground">개</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">제출된 탐구</CardTitle>
+              <Send className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">{projectStats.submitted.length}</div>
               <p className="text-xs text-muted-foreground">개</p>
             </CardContent>
           </Card>
         </div>
 
         {/* 성장 시각화 */}
-        {completedProjects.length > 0 && (
+        {projectStats.completed.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <Card>
               <CardHeader>
@@ -968,117 +1013,245 @@ export default function PortfolioPage() {
           </div>
         )}
 
-        {/* 프로젝트 필터 */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>탐구 프로젝트 목록</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Button
-                variant={selectedFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedFilter("all")}
-              >
-                전체 ({projects.length})
-              </Button>
-              <Button
-                variant={selectedFilter === "COMPLETED" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedFilter("COMPLETED")}
-              >
-                완료 ({completedProjects.length})
-              </Button>
-              <Button
-                variant={selectedFilter === "IN_PROGRESS" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedFilter("IN_PROGRESS")}
-              >
-                진행중 ({inProgressProjects.length})
-              </Button>
-            </div>
-
-            {filteredProjects.length === 0 ? (
-              <div className="text-center py-12">
-                <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {selectedFilter === "all" ? "아직 탐구 프로젝트가 없습니다" : "해당하는 프로젝트가 없습니다"}
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  새로운 탐구 활동을 시작해보세요!
-                </p>
-                <Button onClick={() => router.push("/student/explore")}>
-                  탐구 시작하기
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredProjects.map((project) => (
-                  <Card key={project.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-base">{project.title}</CardTitle>
-                        <Badge className={getStatusColor(project.status)}>
-                          {getStatusText(project.status)}
+        {/* 진행 중인 탐구 */}
+        {projectStats.inProgress.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-600">
+                <Target className="h-5 w-5" />
+                진행 중인 탐구 ({projectStats.inProgress.length}개)
+              </CardTitle>
+              <CardDescription>
+                현재 진행하고 있는 탐구 활동들을 확인하세요.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {Object.entries(projectsByTemplate.inProgress).map(([templateId, templateProjects]) => {
+                  const template = templateProjects[0].template;
+                  return (
+                    <div key={templateId} className="border rounded-lg p-4 bg-blue-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-blue-900">{template.title}</h3>
+                        <Badge className="bg-blue-100 text-blue-800">
+                          {templateProjects.length}개 프로젝트
                         </Badge>
                       </div>
-                      <CardDescription>{project.template.title}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {project.class && (
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">클래스:</span> {project.class.name}
-                          </div>
-                        )}
-                        
-                        {project.grade && (
-                          <div className="text-sm">
-                            <span className="font-medium">평가:</span> 
-                            <Badge variant="outline" className="ml-2">{project.grade}</Badge>
-                          </div>
-                        )}
-
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {new Date(project.createdAt).toLocaleDateString()}
-                        </div>
-
-                        <div className="flex justify-between items-center pt-2">
-                          <div className="text-xs text-gray-500">
-                            피드백 {project.feedbacks.length}개
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => router.push(`/student/projects/${project.id}`)}
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              보기
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => exportSingleProject(project)}
-                              className="text-blue-600 hover:text-blue-700"
-                            >
-                              <Download className="h-3 w-3 mr-1" />
-                              출력하기
-                            </Button>
-                          </div>
-                        </div>
+                      {template.description && (
+                        <p className="text-sm text-blue-700 mb-3">{template.description}</p>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {templateProjects.map((project) => {
+                          const statusInfo = getStatusInfo(project.status);
+                          const StatusIcon = statusInfo.icon;
+                          return (
+                            <div key={project.id} className="bg-white rounded-lg p-3 border border-blue-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-sm">{project.title || template.title}</h4>
+                                <Badge className={`${statusInfo.color} text-xs`}>
+                                  <StatusIcon className="h-3 w-3 mr-1" />
+                                  {statusInfo.text}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-gray-500 mb-2">
+                                <Calendar className="h-3 w-3 inline mr-1" />
+                                {new Date(project.updatedAt).toLocaleDateString()}
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/student/projects/${project.id}`)}
+                                  className="text-xs"
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  계속하기
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 완료된 탐구 */}
+        {projectStats.completed.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                완료된 탐구 ({projectStats.completed.length}개)
+              </CardTitle>
+              <CardDescription>
+                성공적으로 완료한 탐구 활동들을 확인하세요.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {Object.entries(projectsByTemplate.completed).map(([templateId, templateProjects]) => {
+                  const template = templateProjects[0].template;
+                  return (
+                    <div key={templateId} className="border rounded-lg p-4 bg-green-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-green-900">{template.title}</h3>
+                        <Badge className="bg-green-100 text-green-800">
+                          {templateProjects.length}개 프로젝트
+                        </Badge>
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-green-700 mb-3">{template.description}</p>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {templateProjects.map((project) => {
+                          const statusInfo = getStatusInfo(project.status);
+                          const StatusIcon = statusInfo.icon;
+                          return (
+                            <div key={project.id} className="bg-white rounded-lg p-3 border border-green-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-sm">{project.title || template.title}</h4>
+                                <Badge className={`${statusInfo.color} text-xs`}>
+                                  <StatusIcon className="h-3 w-3 mr-1" />
+                                  {statusInfo.text}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-gray-500 mb-2">
+                                <Calendar className="h-3 w-3 inline mr-1" />
+                                {new Date(project.updatedAt).toLocaleDateString()}
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/student/projects/${project.id}`)}
+                                  className="text-xs"
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  보기
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => exportSingleProject(project)}
+                                  className="text-xs text-blue-600 hover:text-blue-700"
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  출력
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 제출된 탐구 */}
+        {projectStats.submitted.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-purple-600">
+                <Send className="h-5 w-5" />
+                제출된 탐구 ({projectStats.submitted.length}개)
+              </CardTitle>
+              <CardDescription>
+                교사에게 제출한 탐구 활동들을 확인하세요.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {Object.entries(projectsByTemplate.submitted).map(([templateId, templateProjects]) => {
+                  const template = templateProjects[0].template;
+                  return (
+                    <div key={templateId} className="border rounded-lg p-4 bg-purple-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-purple-900">{template.title}</h3>
+                        <Badge className="bg-purple-100 text-purple-800">
+                          {templateProjects.length}개 프로젝트
+                        </Badge>
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-purple-700 mb-3">{template.description}</p>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {templateProjects.map((project) => {
+                          const statusInfo = getStatusInfo(project.status);
+                          const StatusIcon = statusInfo.icon;
+                          return (
+                            <div key={project.id} className="bg-white rounded-lg p-3 border border-purple-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-sm">{project.title || template.title}</h4>
+                                <Badge className={`${statusInfo.color} text-xs`}>
+                                  <StatusIcon className="h-3 w-3 mr-1" />
+                                  {statusInfo.text}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-gray-500 mb-2">
+                                <Calendar className="h-3 w-3 inline mr-1" />
+                                {new Date(project.updatedAt).toLocaleDateString()}
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/student/projects/${project.id}`)}
+                                  className="text-xs"
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  보기
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => exportSingleProject(project)}
+                                  className="text-xs text-blue-600 hover:text-blue-700"
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  출력
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 빈 상태 */}
+        {projects.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-12">
+              <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                아직 탐구 프로젝트가 없습니다
+              </h3>
+              <p className="text-gray-500 mb-4">
+                새로운 탐구 활동을 시작해보세요!
+              </p>
+              <Button onClick={() => router.push("/student/explore")}>
+                탐구 시작하기
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 성장 인사이트 */}
-        {completedProjects.length > 0 && (
+        {projectStats.completed.length > 0 && (
           <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
             <CardHeader>
               <CardTitle className="text-blue-900">성장 인사이트</CardTitle>
@@ -1087,21 +1260,21 @@ export default function PortfolioPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600 mb-1">
-                    {Math.round((completedProjects.length / projects.length) * 100)}%
+                    {Math.round((projectStats.completed.length / projects.length) * 100)}%
                   </div>
                   <p className="text-blue-700">완료율</p>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600 mb-1">
-                    {completedProjects.length > 0 ? Math.round(
-                      completedProjects.reduce((total, project) => total + project.feedbacks.length, 0) / completedProjects.length
+                    {projectStats.completed.length > 0 ? Math.round(
+                      projectStats.completed.reduce((total, project) => total + project.feedbacks.length, 0) / projectStats.completed.length
                     ) : 0}
                   </div>
                   <p className="text-blue-700">평균 피드백 수</p>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600 mb-1">
-                    {new Set(completedProjects.map(p => p.template.title.split(" ")[0])).size}
+                    {new Set(projectStats.completed.map(p => p.template.title.split(" ")[0])).size}
                   </div>
                   <p className="text-blue-700">탐구 분야 수</p>
                 </div>

@@ -406,7 +406,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                           파일 보기
                                         </a>
                                       </div>
-                                    ) : component.type === 'TEXTAREA' && 
+                                    ) : (component.type === 'TEXTAREA' || component.type === 'MATH_EDITOR') && 
                                       (component.placeholder?.includes("Math Editor") || 
                                        component.placeholder?.includes("수학 수식, 표, 이미지")) ? (
                                       <MathEditor

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
-import { clearAllAuthData, checkAuthStatus } from "@/lib/auth-utils";
+
 
 // 간단한 User 타입 정의
 interface User {
@@ -320,7 +320,17 @@ export default function AuthProvider({
         }
         
         // 강제로 모든 인증 데이터 정리
-        clearAllAuthData();
+        localStorage.clear();
+        sessionStorage.clear();
+        const cookiesToDelete = [
+          'demoUser',
+          'sb-access-token',
+          'sb-refresh-token',
+          'supabase-auth-token'
+        ];
+        cookiesToDelete.forEach(cookieName => {
+          document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0`;
+        });
         
       } catch (supabaseError) {
         console.error('Supabase signOut connection error:', supabaseError);
