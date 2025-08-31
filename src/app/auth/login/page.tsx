@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { clearAllAuthData, checkAuthStatus } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +96,8 @@ function LoginForm() {
       }
 
       if (data.user) {
+        console.log('Supabase login successful:', data.user.email);
+        
         // 사용자 정보를 데이터베이스에 동기화
         const userRole = data.user.user_metadata?.role || data.user.app_metadata?.role || "STUDENT";
         const userName = data.user.user_metadata?.name || data.user.email?.split('@')[0] || "사용자";
@@ -116,19 +119,22 @@ function LoginForm() {
           // 동기화 실패해도 로그인은 계속 진행
         }
         
-        // 역할에 따라 대시보드로 리디렉션
-        if (userRole === "TEACHER") {
-          router.push("/teacher/dashboard");
-        } else if (userRole === "STUDENT") {
-          router.push("/student/dashboard");
-        } else if (userRole === "ADMIN") {
-          router.push("/admin/dashboard");
-        } else {
-          // 역할이 설정되지 않은 경우 기본적으로 학생으로 처리
-          router.push("/student/dashboard");
-        }
-        
-        router.refresh();
+        // AuthProvider가 인증 상태를 감지할 시간을 주기 위해 잠시 대기
+        setTimeout(() => {
+          // 역할에 따라 대시보드로 리디렉션
+          console.log('Redirecting based on role:', userRole);
+          if (userRole === "TEACHER") {
+            router.push("/teacher/dashboard");
+          } else if (userRole === "STUDENT") {
+            router.push("/student/dashboard");
+          } else if (userRole === "ADMIN") {
+            router.push("/admin/dashboard");
+          } else {
+            // 역할이 설정되지 않은 경우 기본적으로 학생으로 처리
+            console.log('No role specified, defaulting to STUDENT');
+            router.push("/student/dashboard");
+          }
+        }, 1000); // 1초로 증가
       }
     } catch (error) {
       setErrors({ form: "로그인 중 오류가 발생했습니다." });
@@ -188,6 +194,24 @@ function LoginForm() {
               {isLoading ? "로그인 중..." : "로그인"}
             </Button>
 
+            <div className="text-center space-y-2">
+              <a 
+                href="/auth/forgot-password" 
+                className="text-sm text-blue-600 hover:text-blue-500 hover:underline"
+              >
+                비밀번호를 잊으셨나요?
+              </a>
+              <div className="text-sm text-gray-600">
+                계정이 없으신가요?{" "}
+                <a 
+                  href="/auth/register" 
+                  className="text-blue-600 hover:text-blue-500 hover:underline"
+                >
+                  회원가입하기
+                </a>
+              </div>
+            </div>
+
             {/* 심사용 데모 계정 정보 */}
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <h3 className="text-sm font-semibold text-yellow-800 mb-3">📝 심사용 데모 계정</h3>
@@ -244,17 +268,24 @@ function LoginForm() {
               <p className="text-xs text-yellow-700">
                 * 위 계정들로 로그인하시면 모든 기능을 체험하실 수 있습니다
               </p>
+              
+              {/* 세션 정리 버튼 */}
+              <div className="mt-3 pt-3 border-t border-yellow-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearAllAuthData();
+                    checkAuthStatus();
+                    alert('모든 세션 데이터가 정리되었습니다. 페이지를 새로고침해주세요.');
+                  }}
+                  className="text-xs text-red-600 hover:text-red-500 hover:underline"
+                >
+                  🔧 세션 데이터 완전 정리 (문제 해결용)
+                </button>
+              </div>
             </div>
 
-            <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={() => router.push("/auth/register")}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                계정이 없나요? 회원가입하기
-              </button>
-            </div>
+
           </form>
         </CardContent>
       </Card>

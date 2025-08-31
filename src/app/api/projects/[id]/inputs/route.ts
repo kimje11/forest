@@ -49,6 +49,47 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateInputSchema.parse(body);
 
+    // stepId와 componentId가 프로젝트의 템플릿에 실제로 존재하는지 확인
+    const projectWithTemplate = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        template: {
+          include: {
+            steps: {
+              include: {
+                components: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!projectWithTemplate) {
+      return NextResponse.json(
+        { error: "프로젝트를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
+
+    // 해당 step이 존재하는지 확인
+    const step = projectWithTemplate.template.steps.find(s => s.id === validatedData.stepId);
+    if (!step) {
+      return NextResponse.json(
+        { error: "유효하지 않은 단계 ID입니다." },
+        { status: 400 }
+      );
+    }
+
+    // 해당 component가 존재하는지 확인
+    const component = step.components.find(c => c.id === validatedData.componentId);
+    if (!component) {
+      return NextResponse.json(
+        { error: "유효하지 않은 컴포넌트 ID입니다." },
+        { status: 400 }
+      );
+    }
+
     // 입력 데이터 업데이트 또는 생성 (upsert)
     const input = await prisma.projectInput.upsert({
       where: {

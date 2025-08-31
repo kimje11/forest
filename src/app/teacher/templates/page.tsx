@@ -6,7 +6,8 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookOpen, Plus, Users, Calendar, Edit, Trash2, Copy, Share2 } from "lucide-react";
+import { BookOpen, Plus, Users, Calendar, Edit, Trash2, Copy, Share2, RefreshCw } from "lucide-react";
+import AuthHeader from "@/components/layout/auth-header";
 
 interface Template {
   id: string;
@@ -50,6 +51,14 @@ function TemplatesContent() {
     checkAuth();
     fetchTemplates();
     fetchClasses();
+
+    // 페이지가 다시 포커스될 때 데이터 새로고침
+    const handleFocus = () => {
+      fetchTemplates();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const checkAuth = async () => {
@@ -69,6 +78,7 @@ function TemplatesContent() {
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates);
+        console.log("Templates updated:", data.templates.map(t => ({ title: t.title, projects: t._count.projects })));
       }
     } catch (error) {
       console.error("Failed to fetch templates:", error);
@@ -136,6 +146,7 @@ function TemplatesContent() {
       }
 
       setShowShareModal(false);
+      fetchTemplates(); // 템플릿 사용량 업데이트
     } catch (error) {
       console.error("Share template error:", error);
       alert("템플릿 공유 중 오류가 발생했습니다.");
@@ -178,8 +189,8 @@ function TemplatesContent() {
       });
 
       if (response.ok) {
-        setTemplates(templates.filter(t => t.id !== templateId));
         alert("템플릿이 성공적으로 삭제되었습니다.");
+        fetchTemplates(); // 템플릿 목록 새로고침 (사용량 포함)
       } else {
         const error = await response.json();
         alert(error.error || "템플릿 삭제에 실패했습니다.");
@@ -206,14 +217,23 @@ function TemplatesContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+      <AuthHeader 
+        title="탐구 템플릿"
+        subtitle="탐구 활동을 위한 템플릿을 관리하세요"
+      />
+      
+      <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">탐구 템플릿</h1>
-              <p className="text-gray-600">탐구 활동을 위한 템플릿을 관리하세요.</p>
-            </div>
+          <div className="py-4">
             <div className="flex gap-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={fetchTemplates}
+                title="데이터 새로고침"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
               <Link href="/teacher/dashboard">
                 <Button variant="outline">대시보드로</Button>
               </Link>
@@ -226,7 +246,7 @@ function TemplatesContent() {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {message && (

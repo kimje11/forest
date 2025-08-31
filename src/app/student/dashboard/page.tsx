@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Trophy, Clock, Plus, User, Eye, RefreshCw } from "lucide-react";
+import { BookOpen, Trophy, Clock, Plus, User, Eye, RefreshCw, Brain, Settings } from "lucide-react";
 import JoinClassModal from "@/components/modals/join-class-modal";
 import ConceptHelper from "@/components/ai/concept-helper";
+import PasswordVerificationModal from "@/components/ui/password-verification-modal";
+import AuthHeader from "@/components/layout/auth-header";
+import { safeUserName } from "@/utils/text-utils";
 import FeatureNote from "@/components/ui/feature-note";
 
 interface ClassData {
@@ -43,20 +47,46 @@ interface Feedback {
 }
 
 export default function StudentDashboard() {
+  console.log("StudentDashboard component rendered");
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, loading: authLoading } = useAuth();
+  console.log("Auth state:", { user: !!user, loading: authLoading, userRole: (user as any)?.role });
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
-    checkAuth();
-    fetchClasses();
-    fetchProjects();
-    fetchFeedbacks();
-  }, []);
+    // 인증 로딩 중이면 아무것도 하지 않음
+    if (authLoading) {
+      console.log("Auth loading, waiting...");
+      return;
+    }
+
+    // 사용자가 없으면 로그인 페이지로 리다이렉트
+    if (!user) {
+      console.log("No user, redirecting to login");
+      router.push("/auth/login");
+      return;
+    }
+
+    // 사용자 역할 확인
+    const userRole = (user as any)?.role;
+    console.log("User role:", userRole);
+
+    if (userRole === "STUDENT") {
+      console.log("Student user confirmed, fetching data...");
+      fetchClasses();
+      fetchProjects();
+      fetchFeedbacks();
+    } else if (userRole && userRole !== "STUDENT") {
+      console.log("Wrong role, redirecting to login");
+      // 잘못된 역할의 사용자는 로그인 페이지로 리다이렉트
+      router.push("/auth/login");
+    }
+  }, [user, authLoading, router]);
 
   // 페이지가 다시 포커스될 때 프로젝트 목록 새로고침
   useEffect(() => {
@@ -69,25 +99,7 @@ export default function StudentDashboard() {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  const checkAuth = async () => {
-    try {
-      const response = await fetch("/api/auth/me", {
-        credentials: "include"
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.user.role !== "STUDENT") {
-          router.push("/auth/login");
-          return;
-        }
-        setUser(data.user);
-      } else {
-        router.push("/auth/login");
-      }
-    } catch (error) {
-      router.push("/auth/login");
-    }
-  };
+
 
   const fetchClasses = async () => {
     try {
@@ -100,8 +112,6 @@ export default function StudentDashboard() {
       }
     } catch (error) {
       console.error("Failed to fetch classes:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -133,76 +143,85 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      // 데모 계정 확인
-      const demoUser = localStorage.getItem('demoUser');
-      
-      if (demoUser) {
-        // 데모 계정 로그아웃 - localStorage와 쿠키 정리
-        localStorage.removeItem('demoUser');
-        document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        router.push("/auth/login");
-        router.refresh();
-        return;
-      }
-      
-      // 일반 Supabase 계정 로그아웃
-      const { createClient } = await import("@/lib/supabase");
-      const supabase = createClient();
-      
-      await supabase.auth.signOut();
-      router.push("/auth/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-      router.push("/auth/login");
-    }
-  };
 
 
 
-  if (isLoading) {
+
+  // 인증 로딩 중일 때
+  if (authLoading) {
+    console.log("Auth loading, showing loading screen");
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
+          <p className="text-gray-600">인증 확인 중...</p>
         </div>
       </div>
     );
   }
 
+  // 사용자가 없을 때 (인증 로딩이 완료된 후)
   if (!user) {
-    return null;
+    console.log("No user found after auth loading completed");
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">로그인이 필요합니다</p>
+          <p className="text-sm text-gray-500 mt-2">잠시 후 로그인 페이지로 이동합니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 데이터 로딩 중일 때 (인증은 완료됨)
+  if (isLoading) {
+    console.log("Data loading, showing loading screen");
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+      <AuthHeader 
+        title="학생 대시보드에서 탐구를 시작해보세요"
+        subtitle={`안녕하세요, ${safeUserName((user as any)?.name || user?.email)}님! AI 도우미를 활용하여 흥미로운 탐구 활동을 시작해보세요.`}
+      />
+      
+      {/* 추가 기능 버튼들 */}
+      <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">학생 대시보드에서 탐구를 시작해보십시다</h1>
-              <p className="text-gray-600">안녕하세요, {user.name}님! AI 도우미를 활용하여 흥미로운 탐구 활동을 시작해보십시다.</p>
-            </div>
-            <div className="flex gap-4">
+          <div className="py-4">
+            <div className="flex justify-end gap-4">
               <FeatureNote
                 title="학생 대시보드 사용법"
                 description="학생용 주요 기능들을 안내합니다"
                 details={[
-                  "AI 개념 탐구 도우미: 궁금한 질문을 입력하면 AI가 핵심 개념과 탐구 방향을 제안합니다",
+                  "AI 탐구 도우미: 대시보드 하단의 AI 개념 도우미와 대화형 챗봇을 활용해보세요",
                   "탐구 활동 시작: 제공된 템플릿이나 자유 주제로 탐구 활동을 시작할 수 있습니다",
                   "진행 상황 관리: 진행 중인 탐구와 완료된 탐구를 한눈에 확인할 수 있습니다",
                   "포트폴리오 관리: 완성된 탐구 보고서를 포트폴리오로 관리하고 PDF로 내보낼 수 있습니다"
                 ]}
                 className="shrink-0"
               />
-              <Button variant="outline" onClick={handleLogout}>로그아웃</Button>
+              <Button
+                onClick={() => setShowPasswordModal(true)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                개인정보 수정
+              </Button>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
@@ -269,7 +288,7 @@ export default function StudentDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 클래스 참여 */}
           <Card>
             <CardHeader>
@@ -306,9 +325,9 @@ export default function StudentDashboard() {
                           {cls.teacher.name}
                         </div>
                       </div>
-                      {cls.description && (
+                      {cls.description ? (
                         <p className="text-xs text-gray-600 mb-2">{cls.description}</p>
-                      )}
+                      ) : null}
                       <div className="flex justify-between items-center text-xs text-gray-500">
                         <span>참여일: {new Date(cls.enrollmentDate).toLocaleDateString()}</span>
                         <div className="flex items-center gap-2">
@@ -333,34 +352,30 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
 
-          {/* 탐구 시작하기 */}
+          {/* 탐구 프로젝트 시작하기 */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>새 탐구를 시작해보십시다</CardTitle>
+                  <CardTitle>탐구 프로젝트 시작하기</CardTitle>
                   <CardDescription>
-                    AI 도우미로 흥미로운 탐구 주제를 발견하고 시작해보십시다.
+                    클래스 활동이나 자유 주제로 탐구 프로젝트를 시작해보세요.
                   </CardDescription>
                 </div>
                 <FeatureNote
-                  title="AI 개념 탐구 도우미 사용법"
-                  description="AI를 활용한 탐구 주제 발견 방법을 안내합니다"
+                  title="탐구 프로젝트 시작 방법"
+                  description="효과적인 탐구 프로젝트 시작 방법을 안내합니다"
                   details={[
-                    "질문 입력: '왜 식물은 빛을 향해 자랄까?' 같은 궁금한 질문을 입력해보십시다",
-                    "과목 선택: 물리, 화학, 생물, 수학 등 관련 과목을 선택하면 더 정확한 분석을 받을 수 있습니다",
-                    "분석 결과 활용: AI가 제공하는 핵심 개념과 탐구 질문을 참고하여 탐구를 계획해보십시다",
-                    "직접 탐구 시작: 원하는 주제가 있다면 '직접 탐구 시작하기' 버튼을 눌러 바로 시작할 수 있습니다"
+                    "클래스 활동: 참여한 클래스에서 제공하는 탐구 활동으로 시작해보세요",
+                    "AI 도우미 활용: 하단의 AI 개념 도우미와 대화형 도우미로 주제를 탐색해보세요",
+                    "자유 탐구: 관심 있는 주제나 궁금한 내용으로 자유롭게 탐구를 시작해보세요",
+                    "포트폴리오 관리: 완성된 탐구는 포트폴리오에서 체계적으로 관리할 수 있습니다"
                   ]}
                   className="shrink-0"
                 />
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* AI 개념 도우미 */}
-              <ConceptHelper 
-                className="border-0 shadow-none bg-transparent p-0"
-              />
               
               {/* 기본 버튼들 */}
               <div className="space-y-3 pt-4 border-t">
@@ -379,6 +394,68 @@ export default function StudentDashboard() {
                   <Trophy className="mr-2 h-4 w-4" />
                   포트폴리오 보기
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* AI 탐구 도우미들 - 두 번째 행 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          {/* AI 개념 탐구 도우미 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-blue-600" />
+                AI 개념 탐구 도우미
+              </CardTitle>
+              <CardDescription>
+                궁금한 질문을 입력하면 AI가 핵심 개념과 탐구 방향을 제안합니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 min-h-[800px] flex flex-col">
+                <p className="text-sm text-gray-600 mb-3">
+                  클래스 활동과 연계하여 탐구 주제를 발견해보세요!
+                </p>
+                <div className="flex-1">
+                  <ConceptHelper 
+                    className="border-0 shadow-none bg-transparent p-0 h-full"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI 대화형 탐구 도우미 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-purple-600" />
+                AI 대화형 탐구 도우미
+              </CardTitle>
+              <CardDescription>
+                AI와 실시간 대화하며 탐구 주제를 깊이 있게 탐색해보세요.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200 flex flex-col">
+                <p className="text-sm text-gray-600 mb-3">
+                  클래스에서 배운 내용과 연관된 질문을 해보세요!
+                </p>
+                <div className="rounded-lg overflow-hidden shadow-sm border">
+                  <iframe 
+                    src="https://getgpt.app/play/NVojbkcZsd/iframe" 
+                    width="600" 
+                    height="800" 
+                    frameBorder="0"
+                    className="w-full h-[800px]"
+                    title="AI 탐구 챗봇"
+                    style={{ minHeight: '800px' }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 팁: 구체적인 질문을 하면 더 도움이 되는 답변을 받을 수 있어요!
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -421,17 +498,20 @@ export default function StudentDashboard() {
             ) : (
               <div className="space-y-6">
                 {/* 진행 중인 탐구 (DRAFT, IN_PROGRESS) */}
-                {projects.filter(p => p.status === "DRAFT" || p.status === "IN_PROGRESS").length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-600" />
-                      진행 중인 탐구 ({projects.filter(p => p.status === "DRAFT" || p.status === "IN_PROGRESS").length}개)
-                    </h4>
-                    <div className="space-y-3">
-                      {projects
-                        .filter(p => p.status === "DRAFT" || p.status === "IN_PROGRESS")
-                        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                        .map((project) => (
+                {(() => {
+                  const inProgressProjects = projects.filter(p => p.status === "DRAFT" || p.status === "IN_PROGRESS");
+                  if (inProgressProjects.length === 0) return null;
+                  
+                  return (
+                    <div key="in-progress-section">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        진행 중인 탐구 ({inProgressProjects.length}개)
+                      </h4>
+                      <div className="space-y-3">
+                        {inProgressProjects
+                          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                          .map((project) => (
                           <div key={project.id} className="p-4 border rounded-lg hover:bg-gray-50 bg-blue-50 border-blue-200">
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex-1">
@@ -462,22 +542,26 @@ export default function StudentDashboard() {
                             </div>
                           </div>
                         ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* 완료 중인 탐구 (COMPLETED - 완료했지만 아직 제출하지 않음) */}
-                {projects.filter(p => p.status === "COMPLETED").length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-orange-600" />
-                      완료 중인 탐구 ({projects.filter(p => p.status === "COMPLETED").length}개)
-                    </h4>
-                    <div className="space-y-3">
-                      {projects
-                        .filter(p => p.status === "COMPLETED")
-                        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                        .map((project) => (
+                {(() => {
+                  const completedProjects = projects.filter(p => p.status === "COMPLETED");
+                  if (completedProjects.length === 0) return null;
+                  
+                  return (
+                    <div key="completed-section">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-orange-600" />
+                        완료 중인 탐구 ({completedProjects.length}개)
+                      </h4>
+                      <div className="space-y-3">
+                        {completedProjects
+                          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                          .map((project) => (
                           <div key={project.id} className="p-4 border rounded-lg hover:bg-gray-50 bg-orange-50 border-orange-200">
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex-1">
@@ -508,20 +592,24 @@ export default function StudentDashboard() {
                             </div>
                           </div>
                         ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* 제출한 탐구 (SUBMITTED) */}
-                {projects.filter(p => p.status === "SUBMITTED").length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-green-600" />
-                      제출한 탐구 ({projects.filter(p => p.status === "SUBMITTED").length}개)
-                    </h4>
-                    <div className="space-y-3">
-                      {projects
-                        .filter(p => p.status === "SUBMITTED")
+                {(() => {
+                  const submittedProjects = projects.filter(p => p.status === "SUBMITTED");
+                  if (submittedProjects.length === 0) return null;
+                  
+                  return (
+                    <div key="submitted-section">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-green-600" />
+                        제출한 탐구 ({submittedProjects.length}개)
+                      </h4>
+                      <div className="space-y-3">
+                        {submittedProjects
                         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
                         .map((project) => (
                           <div key={project.id} className="p-4 border rounded-lg hover:bg-gray-50 bg-green-50 border-green-200">
@@ -555,9 +643,10 @@ export default function StudentDashboard() {
                             </div>
                           </div>
                         ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
           </CardContent>
@@ -620,7 +709,7 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                   ))}
-                {feedbacks.length > 5 && (
+                {feedbacks.length > 5 ? (
                   <div className="text-center">
                     <Button
                       variant="outline"
@@ -633,7 +722,7 @@ export default function StudentDashboard() {
                       더 많은 피드백 보기 ({feedbacks.length - 5}개 더)
                     </Button>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
           </CardContent>
@@ -649,6 +738,14 @@ export default function StudentDashboard() {
           fetchProjects(); // 새 클래스 참여 시 프로젝트도 새로고침
           fetchFeedbacks(); // 새 클래스 참여 시 피드백도 새로고침
         }}
+      />
+
+      <PasswordVerificationModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={() => router.push("/student/profile")}
+        title="개인정보 수정"
+        description="개인정보 보호를 위해 현재 비밀번호를 입력해주세요."
       />
     </div>
   );

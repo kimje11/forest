@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Users, Plus, BarChart3, Copy, Settings } from "lucide-react";
 import CreateClassModal from "@/components/modals/create-class-modal";
+import PasswordVerificationModal from "@/components/ui/password-verification-modal";
+import AuthHeader from "@/components/layout/auth-header";
 import FeatureNote from "@/components/ui/feature-note";
+import { safeUserName } from "@/utils/text-utils";
 
 interface ClassData {
   id: string;
@@ -22,43 +26,58 @@ interface ClassData {
 
 export default function TeacherDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, loading: authLoading } = useAuth();
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [templateCount, setTemplateCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
-    checkAuth();
-    fetchClasses();
-    fetchTemplates();
-  }, []);
+    // 인증 로딩 중이면 아무것도 하지 않음
+    if (authLoading) {
+      console.log("Auth loading, waiting...");
+      return;
+    }
 
-  const checkAuth = async () => {
-    try {
-      const response = await fetch("/api/auth/me");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.user.role !== "TEACHER") {
-          router.push("/auth/login");
-          return;
-        }
-        setUser(data.user);
-      } else {
-        router.push("/auth/login");
-      }
-    } catch (error) {
+    // 사용자가 없으면 로그인 페이지로 리다이렉트
+    if (!user) {
+      console.log("No user, redirecting to login");
+      router.push("/auth/login");
+      return;
+    }
+
+    // 사용자 역할 확인
+    const userRole = (user as any)?.role;
+    console.log("User role:", userRole);
+
+    if (userRole === "TEACHER") {
+      console.log("Teacher user confirmed, fetching data...");
+      fetchClasses();
+      fetchTemplates();
+    } else if (userRole && userRole !== "TEACHER") {
+      console.log("Wrong role, redirecting to login");
+      // 잘못된 역할의 사용자는 로그인 페이지로 리다이렉트
       router.push("/auth/login");
     }
-  };
+  }, [user, authLoading, router]);
+
+
 
   const fetchClasses = async () => {
     try {
+      console.log("Fetching classes...");
       const response = await fetch("/api/classes");
+      console.log("Classes response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log("Classes data:", data);
         setClasses(data.classes);
+      } else {
+        const errorData = await response.json();
+        console.error("Classes API error:", errorData);
       }
     } catch (error) {
       console.error("Failed to fetch classes:", error);
@@ -69,10 +88,17 @@ export default function TeacherDashboard() {
 
   const fetchTemplates = async () => {
     try {
+      console.log("Fetching templates...");
       const response = await fetch("/api/templates");
+      console.log("Templates response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log("Templates data:", data);
         setTemplateCount(data.templates.length);
+      } else {
+        const errorData = await response.json();
+        console.error("Templates API error:", errorData);
       }
     } catch (error) {
       console.error("Failed to fetch templates:", error);
@@ -85,58 +111,60 @@ export default function TeacherDashboard() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleLogout = async () => {
-    try {
-      // 데모 계정 확인
-      const demoUser = localStorage.getItem('demoUser');
-      
-      if (demoUser) {
-        // 데모 계정 로그아웃 - localStorage와 쿠키 정리
-        localStorage.removeItem('demoUser');
-        document.cookie = 'demoUser=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        router.push("/auth/login");
-        router.refresh();
-        return;
-      }
-      
-      // 일반 Supabase 계정 로그아웃
-      const { createClient } = await import("@/lib/supabase");
-      const supabase = createClient();
-      
-      await supabase.auth.signOut();
-      router.push("/auth/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-      router.push("/auth/login");
-    }
-  };
 
-  if (isLoading) {
+
+  // 인증 로딩 중일 때
+  if (authLoading) {
+    console.log("Auth loading, showing loading screen");
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
+          <p className="text-gray-600">인증 확인 중...</p>
         </div>
       </div>
     );
   }
 
+  // 사용자가 없을 때 (인증 로딩이 완료된 후)
   if (!user) {
-    return null;
+    console.log("No user found after auth loading completed");
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">로그인이 필요합니다</p>
+          <p className="text-sm text-gray-500 mt-2">잠시 후 로그인 페이지로 이동합니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 데이터 로딩 중일 때 (인증은 완료됨)
+  if (isLoading) {
+    console.log("Data loading, showing loading screen");
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+      <AuthHeader 
+        title="교사 대시보드를 활용해보세요"
+        subtitle={`안녕하세요, ${safeUserName((user as any)?.name || user?.email, '선생님')}님! 탐구 템플릿을 만들고 학생들의 탐구 활동을 관리해보세요.`}
+      />
+      
+      {/* 추가 기능 버튼들 */}
+      <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">교사 대시보드를 활용해보십시다</h1>
-              <p className="text-gray-600">안녕하세요, {user.name}님! 탐구 템플릿을 만들고 학생들의 탐구 활동을 관리해보십시다.</p>
-            </div>
-            <div className="flex gap-4">
+          <div className="py-4">
+            <div className="flex justify-end gap-4">
               <FeatureNote
                 title="교사 대시보드 사용법"
                 description="교사용 주요 기능들을 안내합니다"
@@ -148,11 +176,18 @@ export default function TeacherDashboard() {
                 ]}
                 className="shrink-0"
               />
-              <Button variant="outline" onClick={handleLogout}>로그아웃</Button>
+              <Button
+                onClick={() => setShowPasswordModal(true)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                개인정보 수정
+              </Button>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -231,13 +266,20 @@ export default function TeacherDashboard() {
               ) : (
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {classes.map((cls) => (
-                    <div key={cls.id} className="p-3 border rounded-lg">
+                    <div 
+                      key={cls.id} 
+                      className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/teacher/classes/${cls.id}`)}
+                    >
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-medium">{cls.name}</h4>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleCopyCode(cls.classCode)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // 부모 클릭 이벤트 방지
+                            handleCopyCode(cls.classCode);
+                          }}
                         >
                           {copiedCode === cls.classCode ? (
                             "복사됨"
@@ -252,6 +294,9 @@ export default function TeacherDashboard() {
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>학생 {cls._count.enrollments}명</span>
                         <span>프로젝트 {cls._count.projects}개</span>
+                      </div>
+                      <div className="mt-2 text-xs text-blue-600">
+                        클릭하여 클래스 관리 →
                       </div>
                     </div>
                   ))}
@@ -330,6 +375,14 @@ export default function TeacherDashboard() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={fetchClasses}
+      />
+
+      <PasswordVerificationModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={() => router.push("/teacher/profile")}
+        title="개인정보 수정"
+        description="개인정보 보호를 위해 현재 비밀번호를 입력해주세요."
       />
     </div>
   );

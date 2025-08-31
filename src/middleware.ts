@@ -31,9 +31,41 @@ export async function middleware(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // 세션과 사용자 정보 모두 확인 (implicit flow 사용)
+  let session = null
+  let user = null
+  
+  try {
+    const sessionResult = await supabase.auth.getSession()
+    session = sessionResult.data.session
+    
+    const userResult = await supabase.auth.getUser()
+    user = userResult.data.user
+    
+    // AuthSessionMissingError는 정상적인 상황이므로 무시
+    if (sessionResult.error && sessionResult.error.name === 'AuthSessionMissingError') {
+      console.log("No session found in middleware (normal for unauthenticated users)")
+    } else if (sessionResult.error) {
+      console.error("Session error in middleware:", sessionResult.error)
+    }
+    
+    if (userResult.error && userResult.error.name === 'AuthSessionMissingError') {
+      console.log("No user found in middleware (normal for unauthenticated users)")
+    } else if (userResult.error) {
+      console.error("User error in middleware:", userResult.error)
+    }
+  } catch (error) {
+    console.error("Middleware auth error:", error)
+    // AuthSessionMissingError는 정상적인 상황이므로 무시
+    if (error instanceof Error && error.name === 'AuthSessionMissingError') {
+      console.log("No session/user found in middleware (normal for unauthenticated users)")
+    }
+  }
+
+  // 세션이 있지만 사용자 정보가 없는 경우 로그만 출력
+  if (session && !user) {
+    console.log("Session exists but no user found in middleware")
+  }
 
   const { pathname } = request.nextUrl
 

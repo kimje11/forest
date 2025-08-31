@@ -6,58 +6,71 @@ import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
     confirmPassword: "",
-    role: "STUDENT" as "STUDENT" | "TEACHER",
+    name: "",
+    role: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "이름을 입력해주세요.";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "이메일을 입력해주세요.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "올바른 이메일 형식을 입력해주세요.";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "비밀번호를 입력해주세요.";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "비밀번호는 8자 이상이어야 합니다.";
-    } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = "비밀번호는 영문과 숫자를 포함해야 합니다.";
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "비밀번호가 일치하지 않습니다.";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    // 유효성 검사
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.email) {
+      newErrors.email = "이메일을 입력해주세요.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "올바른 이메일 형식을 입력해주세요.";
+    } else if (formData.email.includes("@demo.com")) {
+      newErrors.email = "데모 계정 도메인(@demo.com)은 사용할 수 없습니다.";
+    }
+    
+    if (!formData.password) {
+      newErrors.password = "비밀번호를 입력해주세요.";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "비밀번호는 최소 6자리여야 합니다.";
+    }
+    
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "비밀번호 확인을 입력해주세요.";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "비밀번호가 일치하지 않습니다.";
+    }
+    
+    if (!formData.name) {
+      newErrors.name = "이름을 입력해주세요.";
+    }
+    
+    if (!formData.role) {
+      newErrors.role = "역할을 선택해주세요.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
     setIsLoading(true);
+    setErrors({});
 
     try {
       const supabase = createClient();
-      
+
+      // Supabase에 회원가입
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -70,152 +83,221 @@ export default function RegisterPage() {
       });
 
       if (error) {
-        if (error.message === 'User already registered') {
-          setErrors({ form: "이미 가입된 이메일입니다." });
-        } else {
-          setErrors({ form: error.message });
-        }
+        console.error("Registration error:", error);
+        setErrors({ form: error.message || "회원가입에 실패했습니다." });
         return;
       }
 
       if (data.user) {
-        // 이메일 확인이 필요한 경우
-        if (!data.session) {
-          router.push("/auth/login?message=회원가입이 완료되었습니다. 이메일을 확인해주세요.");
-        } else {
-          // 즉시 로그인된 경우
-          router.push("/auth/login?message=회원가입이 완료되었습니다.");
-        }
+        setIsSuccess(true);
       }
+
     } catch (error) {
-      setErrors({ form: "회원가입 중 오류가 발생했습니다." });
+      console.error("Registration error:", error);
+      setErrors({ form: "네트워크 오류가 발생했습니다." });
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-gray-900">
+                회원가입 완료
+              </CardTitle>
+              <CardDescription>
+                이메일 인증을 완료해주세요
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-4">
+                  <strong>{formData.email}</strong>로 인증 이메일을 발송했습니다.
+                  이메일을 확인하고 인증 링크를 클릭하여 회원가입을 완료해주세요.
+                </p>
+                <p className="text-xs text-gray-500">
+                  이메일이 도착하지 않았다면 스팸 폴더를 확인해주세요.
+                </p>
+              </div>
+              
+              <Link href="/auth/login">
+                <Button className="w-full">
+                  로그인 페이지로 이동
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-gray-900">탐구의 숲</CardTitle>
-          <CardDescription>AI기반 자기주도 주제탐구학습 플랫폼</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 역할 선택 */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">역할 선택</label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: "STUDENT" })}
-                  className={`flex-1 p-3 border rounded-lg text-center transition-colors ${
-                    formData.role === "STUDENT"
-                      ? "bg-blue-50 border-blue-500 text-blue-700"
-                      : "border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  학생
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: "TEACHER" })}
-                  className={`flex-1 p-3 border rounded-lg text-center transition-colors ${
-                    formData.role === "TEACHER"
-                      ? "bg-blue-50 border-blue-500 text-blue-700"
-                      : "border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  교사
-                </button>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              회원가입
+            </CardTitle>
+            <CardDescription>
+              새 계정을 만들어 탐구 활동을 시작해보세요
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  이메일 주소
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="example@email.com"
+                  className="w-full"
+                  disabled={isLoading}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-600 mt-1">{errors.email}</p>
+                )}
               </div>
-            </div>
 
-            {/* 이름 */}
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                이름
-              </label>
-              <Input
-                id="name"
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-            </div>
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  이름
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="홍길동"
+                  className="w-full"
+                  disabled={isLoading}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-600 mt-1">{errors.name}</p>
+                )}
+              </div>
 
-            {/* 이메일 */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                이메일
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-            </div>
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                  역할
+                </label>
+                <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="역할을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STUDENT">학생</SelectItem>
+                    <SelectItem value="TEACHER">교사</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.role && (
+                  <p className="text-sm text-red-600 mt-1">{errors.role}</p>
+                )}
+              </div>
 
-            {/* 비밀번호 */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                비밀번호
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className={errors.password ? "border-red-500" : ""}
-              />
-              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-            </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  비밀번호
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="비밀번호를 입력하세요 (최소 6자리)"
+                    className="w-full pr-10"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-red-600 mt-1">{errors.password}</p>
+                )}
+              </div>
 
-            {/* 비밀번호 확인 */}
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium">
-                비밀번호 확인
-              </label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className={errors.confirmPassword ? "border-red-500" : ""}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500">{errors.confirmPassword}</p>
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                  비밀번호 확인
+                </label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    placeholder="비밀번호를 다시 입력하세요"
+                    className="w-full pr-10"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-sm text-red-600 mt-1">{errors.confirmPassword}</p>
+                )}
+              </div>
+
+              {errors.form && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-sm text-red-600">{errors.form}</p>
+                </div>
               )}
-            </div>
 
-            {errors.form && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{errors.form}</p>
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "가입 중..." : "회원가입"}
-            </Button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => router.push("/auth/login")}
-                className="text-sm text-blue-600 hover:underline"
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isLoading}
               >
-                이미 계정이 있나요? 로그인하기
-              </button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                {isLoading ? "가입 중..." : "회원가입"}
+              </Button>
+
+              <div className="text-center space-y-2">
+                <p className="text-sm text-gray-600">
+                  이미 계정이 있으신가요?{" "}
+                  <Link href="/auth/login" className="text-blue-600 hover:text-blue-500 hover:underline">
+                    로그인하기
+                  </Link>
+                </p>
+                <Link href="/auth/login">
+                  <Button variant="ghost" className="text-sm">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    로그인으로 돌아가기
+                  </Button>
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

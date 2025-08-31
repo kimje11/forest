@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import TextWithTables from "@/components/ui/text-with-tables";
 import { parseTextWithTables, sanitizeTableHtml } from "@/utils/table-renderer";
+import { safeUserName } from "@/utils/text-utils";
 import { 
   Trophy, 
   Calendar, 
@@ -843,7 +844,7 @@ export default function PortfolioPage() {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">내 탐구 포트폴리오</h1>
-              <p className="text-gray-600">지금까지의 탐구 여정을 확인해보세요, {user?.name}님!</p>
+              <p className="text-gray-600">지금까지의 탐구 여정을 확인해보세요, {safeUserName(user?.name)}님!</p>
             </div>
             <div className="flex gap-4">
               <Link href="/student/dashboard" prefetch={true}>

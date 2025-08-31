@@ -23,11 +23,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 데이터베이스에서 사용자 확인
     console.log(`Demo login attempt: ${email}`);
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    
+    // 먼저 쿠키에서 업데이트된 사용자 정보 확인
+    const demoUserCookie = request.cookies.get('demoUser')?.value;
+    let user = null;
+    
+    if (demoUserCookie) {
+      try {
+        const demoUser = JSON.parse(demoUserCookie);
+        if (demoUser.email === email) {
+          user = demoUser;
+          console.log(`Using updated demo user from cookie: ${user.name}`);
+        }
+      } catch (e) {
+        console.log('Failed to parse demo user cookie');
+      }
+    }
+    
+    // 쿠키에 없으면 데이터베이스에서 데모 사용자 찾기
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { email }
+      });
+    }
 
     if (!user) {
       console.log(`User not found: ${email}`);
@@ -37,17 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`User found: ${user.name}, stored password hash: ${user.password?.substring(0, 20)}...`);
+    console.log(`User found: ${user.name}`);
     
-    // 비밀번호 확인
+    // 비밀번호 확인 (bcrypt 비교)
     const passwordMatch = await bcrypt.compare(password, user.password || '');
-    console.log(`Password match result: ${passwordMatch}`);
-    
-    // 추가 디버깅: 다양한 비밀번호로 테스트
-    const test123 = await bcrypt.compare('123', user.password || '');
-    const test1234 = await bcrypt.compare('1234', user.password || '');
-    console.log(`Test with '123': ${test123}, Test with '1234': ${test1234}`);
-
     if (!passwordMatch) {
       console.log(`Login failed for ${email}: password mismatch`);
       return NextResponse.json(
@@ -56,6 +68,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`Login successful for ${email}`);
+
     // 성공적인 로그인 - 쿠키 설정
     const response = NextResponse.json({
       success: true,
@@ -63,16 +77,20 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+
+        role: user.role,
+        password: user.password // 비밀번호는 해시화된 상태로 유지
       }
     });
 
-    // 데모 사용자 정보를 쿠키에 저장
+    // 데모 사용자 정보를 쿠키에 저장 (업데이트된 정보 포함)
     response.cookies.set('demoUser', JSON.stringify({
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role
+
+      role: user.role,
+      password: user.password // 비밀번호도 포함하여 다음 로그인 시 사용
     }), {
       path: '/',
       httpOnly: false, // 클라이언트에서 접근 가능하도록

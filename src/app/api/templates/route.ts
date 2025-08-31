@@ -34,6 +34,183 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 데모 계정도 실제 데이터베이스 사용
+    if (false) { // 더 이상 하드코딩된 데이터를 사용하지 않음
+      const demoTemplates = [
+        {
+          id: 'demo-template-1',
+          title: '자유 탐구 템플릿',
+          description: '학생들이 자유롭게 탐구할 수 있는 기본 템플릿입니다.',
+          isDefault: true,
+          teacher: {
+            id: 'demo-teacher-system',
+            name: '시스템'
+          },
+          steps: [
+            {
+              id: 'demo-step-1',
+              title: '탐구 주제 선정',
+              description: '관심 있는 탐구 주제를 선정해보세요.',
+              order: 1,
+              isRequired: true,
+              components: [
+                {
+                  id: 'demo-comp-1',
+                  type: 'TEXT',
+                  label: '탐구 주제',
+                  placeholder: '탐구하고 싶은 주제를 입력하세요',
+                  required: true,
+                  order: 1,
+                  options: null
+                }
+              ]
+            },
+            {
+              id: 'demo-step-2',
+              title: '탐구 계획 수립',
+              description: '어떻게 탐구할지 계획을 세워보세요.',
+              order: 2,
+              isRequired: true,
+              components: [
+                {
+                  id: 'demo-comp-2',
+                  type: 'TEXTAREA',
+                  label: '탐구 계획',
+                  placeholder: '탐구 방법과 절차를 상세히 작성하세요',
+                  required: true,
+                  order: 1,
+                  options: null
+                }
+              ]
+            }
+          ],
+          _count: {
+            projects: 5
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+
+      // 교사인 경우 추가 템플릿 제공
+      if (user.role === "TEACHER") {
+        const subjectTemplates = {
+          'demo-teacher-physics': [
+            {
+              id: 'demo-physics-template',
+              title: '물리 실험 보고서',
+              description: '물리 실험 결과를 정리하는 템플릿입니다.',
+              isDefault: false,
+              teacher: {
+                id: user.id,
+                name: user.name
+              },
+              steps: [
+                {
+                  id: 'physics-step-1',
+                  title: '실험 목적',
+                  description: '실험의 목적을 명확히 하세요.',
+                  order: 1,
+                  isRequired: true,
+                  components: [
+                    {
+                      id: 'physics-comp-1',
+                      type: 'TEXTAREA',
+                      label: '실험 목적',
+                      placeholder: '이 실험을 통해 알아보고자 하는 것을 작성하세요',
+                      required: true,
+                      order: 1,
+                      options: null
+                    }
+                  ]
+                }
+              ],
+              _count: { projects: 3 },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          ],
+          'demo-teacher-chemistry': [
+            {
+              id: 'demo-chemistry-template',
+              title: '화학 실험 보고서',
+              description: '화학 실험 결과를 정리하는 템플릿입니다.',
+              isDefault: false,
+              teacher: {
+                id: user.id,
+                name: user.name
+              },
+              steps: [
+                {
+                  id: 'chemistry-step-1',
+                  title: '화학 반응식',
+                  description: '실험에서 일어난 화학 반응을 정리하세요.',
+                  order: 1,
+                  isRequired: true,
+                  components: [
+                    {
+                      id: 'chemistry-comp-1',
+                      type: 'TEXTAREA',
+                      label: '화학 반응식',
+                      placeholder: '화학 반응식을 작성하세요',
+                      required: true,
+                      order: 1,
+                      options: null
+                    }
+                  ]
+                }
+              ],
+              _count: { projects: 4 },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          ],
+          'demo-teacher-math': [
+            {
+              id: 'demo-math-template',
+              title: '수학 탐구 보고서',
+              description: '수학적 탐구 과정을 정리하는 템플릿입니다.',
+              isDefault: false,
+              teacher: {
+                id: user.id,
+                name: user.name
+              },
+              steps: [
+                {
+                  id: 'math-step-1',
+                  title: '탐구 문제',
+                  description: '수학적으로 탐구할 문제를 정의하세요.',
+                  order: 1,
+                  isRequired: true,
+                  components: [
+                    {
+                      id: 'math-comp-1',
+                      type: 'TEXTAREA',
+                      label: '탐구 문제',
+                      placeholder: '수학적 탐구 문제를 작성하세요',
+                      required: true,
+                      order: 1,
+                      options: null
+                    }
+                  ]
+                }
+              ],
+              _count: { projects: 2 },
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          ]
+        };
+
+        if (subjectTemplates[user.id]) {
+          demoTemplates.push(...subjectTemplates[user.id]);
+        }
+      }
+
+      return NextResponse.json({ templates: demoTemplates }, { status: 200 });
+    }
+
+    // 실제 데이터베이스 사용 (정상적인 환경에서)
     let templates = [];
 
     if (user.role === "TEACHER") {

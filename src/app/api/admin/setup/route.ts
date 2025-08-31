@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { prisma } from "@/lib/prisma";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function POST(request: NextRequest) {
   try {
+    // 환경 변수 확인
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json(
+        { error: "Supabase 환경 변수가 설정되지 않았습니다." },
+        { status: 500 }
+      );
+    }
+
     // Service role key로 Supabase 클라이언트 생성
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -158,6 +166,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    // 환경 변수 확인
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json(
+        { error: "Supabase 환경 변수가 설정되지 않았습니다." },
+        { status: 500 }
+      );
+    }
+
     // 관리자 계정 상태 확인
     const adminEmail = 'admin@exploration-forest.com';
     

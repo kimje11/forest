@@ -1,0 +1,5 @@
+[33maa02e48[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m feat: 비밀번호 재설정 기능 및 UI 개선 완료
+[33m3bb5a66[m fix: admin setup API에서 환경 변수 undefined 오류 방지
+[33m610a2f0[m trigger vercel deployment
+[33m716f356[m[33m ([m[1;31morigin/main[m[33m)[m fix: 프로젝트 제출 서버 오류 해결 - requireAuthWithDemo 적용
+[33m1e1de4b[m fix: TEXTAREA 컴포넌트를 간단한 textarea로 변경 - 즉시 입력 가능하도록 개선

@@ -1,9 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// 서버 컴포넌트용
-export const createServerComponentClient = async () => {
-  const cookieStore = await cookies()
+// 서버 사이드용
+export const createServerSupabaseClient = () => {
+  const cookieStore = cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

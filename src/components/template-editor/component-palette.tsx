@@ -9,7 +9,9 @@ import {
   CheckSquare, 
   Circle, 
   Brain,
-  GripVertical 
+  GripVertical,
+  Calculator,
+  Table
 } from "lucide-react";
 export type ComponentType = "TEXT" | "TEXTAREA" | "FILE_UPLOAD" | "MULTIPLE_CHOICE" | "CHECKBOX" | "AI_TOPIC_HELPER";
 
@@ -41,11 +43,22 @@ const componentItems: ComponentItem[] = [
   {
     type: "TEXTAREA",
     label: "긴 텍스트 입력",
-    description: "여러 줄 텍스트 입력 (LaTeX 지원)",
+    description: "여러 줄 텍스트 입력",
     icon: FileText,
     defaultProps: {
       label: "내용 입력",
       placeholder: "자세한 내용을 입력하세요",
+      required: false,
+    },
+  },
+  {
+    type: "TEXTAREA",
+    label: "수식 및 표 입력",
+    description: "수학 수식, 표, 이미지가 포함된 내용 입력",
+    icon: Calculator,
+    defaultProps: {
+      label: "수식 및 표 입력",
+      placeholder: "수학 수식, 표, 이미지 등을 입력하세요 (Math Editor)",
       required: false,
     },
   },

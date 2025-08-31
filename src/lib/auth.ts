@@ -1,9 +1,9 @@
-import { createServerComponentClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { prisma } from "@/lib/prisma";
 
 export async function getCurrentUser() {
   try {
-    const supabase = await createServerComponentClient();
+    const supabase = createServerSupabaseClient();
     
     const {
       data: { user: authUser },

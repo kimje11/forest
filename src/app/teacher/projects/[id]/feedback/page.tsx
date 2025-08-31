@@ -23,6 +23,8 @@ import {
   Plus,
   Trash2
 } from "lucide-react";
+import TextWithTables from "@/components/ui/text-with-tables";
+import MathEditor from "@/components/ui/math-editor";
 
 interface ProjectStep {
   id: string;
@@ -42,6 +44,21 @@ interface Feedback {
   };
 }
 
+interface ProjectInput {
+  stepId: string;
+  componentId: string;
+  value?: string;
+  fileUrl?: string;
+}
+
+interface Component {
+  id: string;
+  type: string;
+  label: string;
+  placeholder?: string;
+  required: boolean;
+}
+
 interface Project {
   id: string;
   title: string;
@@ -58,9 +75,10 @@ interface Project {
   template: {
     id: string;
     title: string;
-    steps: ProjectStep[];
+    steps: (ProjectStep & { components: Component[] })[];
   };
   feedbacks: Feedback[];
+  inputs: ProjectInput[];
 }
 
 export default function ProjectFeedbackPage({ params }: { params: Promise<{ id: string }> }) {
@@ -189,6 +207,127 @@ export default function ProjectFeedbackPage({ params }: { params: Promise<{ id: 
     }
   };
 
+  const renderStudentContent = (stepId: string) => {
+    if (!project) return null;
+
+    const step = project.template.steps.find(s => s.id === stepId);
+    if (!step) return <p className="text-gray-500">해당 단계를 찾을 수 없습니다.</p>;
+
+    const stepInputs = project.inputs.filter(input => input.stepId === stepId);
+    
+    if (stepInputs.length === 0) {
+      return (
+        <p className="text-gray-500 italic">학생이 아직 이 단계를 작성하지 않았습니다.</p>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {step.components
+          .sort((a, b) => a.label.localeCompare(b.label))
+          .map((component) => {
+            const input = stepInputs.find(inp => inp.componentId === component.id);
+            const value = input?.value || "";
+
+            if (!value.trim()) {
+              return (
+                <div key={component.id} className="p-3 bg-gray-50 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {component.label}
+                    {component.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  <p className="text-gray-500 italic text-sm">작성되지 않음</p>
+                </div>
+              );
+            }
+
+            return (
+              <div key={component.id} className="p-3 border rounded-lg bg-white">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {component.label}
+                  {component.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                
+                {component.type === "FILE_UPLOAD" ? (
+                  renderFileContent(value)
+                ) : component.type === "TEXTAREA" ? (
+                  // Math Editor 감지를 위한 플레이스홀더 확인
+                  component.placeholder?.includes("Math Editor") || 
+                  component.placeholder?.includes("수학 수식, 표, 이미지") ? (
+                    <div className="bg-gray-50 p-4 rounded border min-h-[300px] max-h-[600px] overflow-y-auto">
+                      <MathEditor
+                        value={value}
+                        onChange={() => {}} // 읽기 전용이므로 변경 불가
+                        placeholder={component.placeholder || "내용이 없습니다."}
+                        title={component.label}
+                        readOnly={true}
+                        className="bg-transparent"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 p-4 rounded border min-h-[200px] max-h-[500px] overflow-y-auto">
+                      <TextWithTables className="text-sm text-gray-700">
+                        {value}
+                      </TextWithTables>
+                    </div>
+                  )
+                ) : (
+                  <div className="bg-gray-50 p-3 rounded border min-h-[150px] max-h-[400px] overflow-y-auto">
+                    <TextWithTables className="text-sm text-gray-700">
+                      {value}
+                    </TextWithTables>
+                  </div>
+                )}
+
+              </div>
+            );
+          })}
+      </div>
+    );
+  };
+
+  const renderFileContent = (value: string) => {
+    try {
+      const fileData = JSON.parse(value);
+      return (
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              {fileData.type?.startsWith('image/') ? (
+                <img 
+                  src={fileData.data} 
+                  alt={fileData.name}
+                  className="h-16 w-16 object-cover rounded"
+                />
+              ) : (
+                <div className="h-16 w-16 bg-gray-100 rounded flex items-center justify-center">
+                  <FileText className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {fileData.name}
+              </p>
+              <p className="text-xs text-gray-500">
+                {(fileData.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+              <p className="text-xs text-gray-400">
+                업로드: {new Date(fileData.uploadedAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    } catch (error) {
+      return (
+        <div className="bg-gray-50 p-2 rounded border">
+          <p className="text-sm text-gray-700">{value}</p>
+        </div>
+      );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -242,68 +381,33 @@ export default function ProjectFeedbackPage({ params }: { params: Promise<{ id: 
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 사이드바: 단계 선택 */}
-          <div className="space-y-6">
-            {/* 프로젝트 기본 정보 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  프로젝트 정보
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <span className="text-sm text-gray-500">학생</span>
-                  <p className="font-medium">{project.student.name}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-500">클래스</span>
-                  <p className="font-medium">{project.class.name}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-500">상태</span>
-                  <Badge className={getStatusColor(project.status)}>
-                    {getStatusText(project.status)}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-500">템플릿</span>
-                  <p className="font-medium">{project.template.title}</p>
-                </div>
-              </CardContent>
-            </Card>
-
+      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-screen">
+          {/* 왼쪽: 학생 프로젝트 내용 */}
+          <div className="space-y-4">
             {/* 단계 선택 */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BookOpen className="h-5 w-5 text-green-600" />
-                  피드백 대상 선택
+                  단계 선택
                 </CardTitle>
+                <CardDescription>
+                  피드백을 작성할 단계를 선택하세요. 선택한 단계의 학생 작성 내용이 아래 표시됩니다.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
                   {/* 전체 피드백 */}
                   <button
                     onClick={() => setSelectedStep("general")}
-                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                    className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
                       selectedStep === "general"
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
                         : "border-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">전체 피드백</p>
-                        <p className="text-xs text-gray-500">프로젝트 전반에 대한 피드백</p>
-                      </div>
-                      <Badge variant="outline">
-                        {getStepFeedbacks(null).length}개
-                      </Badge>
-                    </div>
+                    전체 프로젝트 ({getStepFeedbacks(null).length})
                   </button>
 
                   {/* 단계별 피드백 */}
@@ -313,30 +417,97 @@ export default function ProjectFeedbackPage({ params }: { params: Promise<{ id: 
                       <button
                         key={step.id}
                         onClick={() => setSelectedStep(step.id)}
-                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                        className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
                           selectedStep === step.id
-                            ? "border-blue-500 bg-blue-50"
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
                             : "border-gray-200 hover:bg-gray-50"
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">{step.title}</p>
-                            <p className="text-xs text-gray-500">단계 {step.order}</p>
-                          </div>
-                          <Badge variant="outline">
-                            {getStepFeedbacks(step.id).length}개
-                          </Badge>
-                        </div>
+                        {step.title} ({getStepFeedbacks(step.id).length})
                       </button>
                     ))}
                 </div>
               </CardContent>
             </Card>
+
+            {/* 학생이 작성한 내용 */}
+            {selectedStep !== "general" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    학생이 작성한 내용
+                  </CardTitle>
+                  <CardDescription>
+                    {project.template.steps.find(s => s.id === selectedStep)?.title} 단계
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderStudentContent(selectedStep)}
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedStep === "general" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    프로젝트 전체 내용
+                  </CardTitle>
+                  <CardDescription>
+                    학생이 작성한 모든 단계의 내용입니다.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {project.template.steps
+                      .sort((a, b) => a.order - b.order)
+                      .map((step) => (
+                        <div key={step.id} className="border-l-4 border-blue-200 pl-4">
+                          <h4 className="font-medium text-blue-700 mb-3">{step.title}</h4>
+                          {renderStudentContent(step.id)}
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* 메인 컨텐츠: 피드백 작성 및 목록 */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* 오른쪽: 피드백 작성 */}
+          <div className="space-y-4">
+            {/* 프로젝트 기본 정보 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  프로젝트 정보
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-gray-500">학생</span>
+                    <p className="font-medium">{project.student.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">클래스</span>
+                    <p className="font-medium">{project.class.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">상태</span>
+                    <Badge className={getStatusColor(project.status)}>
+                      {getStatusText(project.status)}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">템플릿</span>
+                    <p className="font-medium">{project.template.title}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             {/* 피드백 작성 */}
             <Card>
               <CardHeader>
@@ -352,17 +523,17 @@ export default function ProjectFeedbackPage({ params }: { params: Promise<{ id: 
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       피드백 내용 *
                     </label>
-                    <textarea
+                    <MathEditor
                       value={feedbackContent}
-                      onChange={(e) => setFeedbackContent(e.target.value)}
+                      onChange={setFeedbackContent}
                       placeholder="학생에게 도움이 될 수 있는 구체적이고 건설적인 피드백을 작성해주세요..."
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      rows={6}
+                      title="피드백 작성"
+                      className="min-h-[400px]"
                     />
                   </div>
                   
@@ -436,7 +607,9 @@ export default function ProjectFeedbackPage({ params }: { params: Promise<{ id: 
                               </Button>
                             </div>
                           </div>
-                          <p className="whitespace-pre-wrap text-sm">{feedback.content}</p>
+                          <div className="text-sm">
+                            <TextWithTables text={feedback.content} />
+                          </div>
                         </div>
                       ))}
                   </div>

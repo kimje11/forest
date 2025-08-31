@@ -12,9 +12,11 @@ import {
   Plus,
   Settings,
   Check,
-  X
+  X,
+  Maximize2
 } from "lucide-react";
 import { ComponentType } from "./component-palette";
+import TextExpansionModal, { useTextExpansionShortcuts } from "@/components/ui/text-expansion-modal";
 
 export interface TemplateComponent {
   id: string;
@@ -59,6 +61,9 @@ function ComponentEditor({
     required: component.required,
     options: component.options || "",
   });
+  
+  const [showExpansionModal, setShowExpansionModal] = useState(false);
+  const [expandingField, setExpandingField] = useState<'label' | 'placeholder' | 'options' | null>(null);
 
   const handleSave = () => {
     const updates: Partial<TemplateComponent> = {
@@ -77,31 +82,103 @@ function ComponentEditor({
     onSave(updates);
   };
 
+  const openExpansionModal = (field: 'label' | 'placeholder' | 'options') => {
+    setExpandingField(field);
+    setShowExpansionModal(true);
+  };
+
+  const handleExpansionSave = (text: string) => {
+    if (expandingField) {
+      setFormData({ ...formData, [expandingField]: text });
+    }
+    setShowExpansionModal(false);
+    setExpandingField(null);
+  };
+
+  const getExpansionModalData = () => {
+    if (!expandingField) return { text: '', title: '', placeholder: '' };
+    
+    const data = {
+      label: {
+        text: formData.label,
+        title: '컴포넌트 라벨 편집',
+        placeholder: '컴포넌트의 라벨을 입력하세요...'
+      },
+      placeholder: {
+        text: formData.placeholder,
+        title: '플레이스홀더 편집', 
+        placeholder: '사용자에게 보여줄 입력 힌트를 작성하세요...'
+      },
+      options: {
+        text: formData.options ? JSON.parse(formData.options).join('\n') : '',
+        title: '선택지 편집',
+        placeholder: '각 선택지를 새 줄에 입력하세요...\n예시:\n선택지 1\n선택지 2\n선택지 3'
+      }
+    };
+    
+    return data[expandingField];
+  };
+
   return (
     <div className="p-3 border-2 border-blue-200 bg-blue-50 rounded-lg space-y-3">
       <div className="space-y-2">
         <label className="text-xs font-medium">라벨</label>
-        <Input
-          value={formData.label}
-          onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-          placeholder="컴포넌트 라벨"
-        />
+        <div className="flex gap-2">
+          <Input
+            value={formData.label}
+            onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+            placeholder="컴포넌트 라벨"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => openExpansionModal('label')}
+            title="확대하여 편집"
+          >
+            <Maximize2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
       {(component.type === "TEXT" || component.type === "TEXTAREA") && (
         <div className="space-y-2">
           <label className="text-xs font-medium">플레이스홀더</label>
-          <Input
-            value={formData.placeholder}
-            onChange={(e) => setFormData({ ...formData, placeholder: e.target.value })}
-            placeholder="입력 힌트"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={formData.placeholder}
+              onChange={(e) => setFormData({ ...formData, placeholder: e.target.value })}
+              placeholder="입력 힌트"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => openExpansionModal('placeholder')}
+              title="확대하여 편집"
+            >
+              <Maximize2 className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       )}
 
       {component.type === "MULTIPLE_CHOICE" && (
         <div className="space-y-2">
-          <label className="text-xs font-medium">선택지 (한 줄에 하나씩)</label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium">선택지 (한 줄에 하나씩)</label>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => openExpansionModal('options')}
+              title="확대하여 편집"
+            >
+              <Maximize2 className="h-3 w-3" />
+            </Button>
+          </div>
           <textarea
             value={formData.options ? JSON.parse(formData.options).join("\n") : ""}
             onChange={(e) => {
@@ -138,6 +215,28 @@ function ComponentEditor({
           취소
         </Button>
       </div>
+
+      {/* 텍스트 확대 모달 */}
+      <TextExpansionModal
+        isOpen={showExpansionModal}
+        onClose={() => {
+          setShowExpansionModal(false);
+          setExpandingField(null);
+        }}
+        onSave={(text) => {
+          if (expandingField === 'options') {
+            // 선택지의 경우 줄바꿈으로 분할하여 JSON 배열로 저장
+            const options = text.split('\n').filter(option => option.trim());
+            handleExpansionSave(JSON.stringify(options));
+          } else {
+            handleExpansionSave(text);
+          }
+        }}
+        initialText={getExpansionModalData().text}
+        title={getExpansionModalData().title}
+        placeholder={getExpansionModalData().placeholder}
+        maxLength={expandingField === 'label' ? 100 : expandingField === 'placeholder' ? 200 : undefined}
+      />
     </div>
   );
 }
@@ -199,6 +298,8 @@ export default function TemplateStepComponent({
   const [editingComponent, setEditingComponent] = useState<string | null>(null);
   const [stepTitle, setStepTitle] = useState(step.title);
   const [stepDescription, setStepDescription] = useState(step.description || "");
+  const [showStepExpansionModal, setShowStepExpansionModal] = useState(false);
+  const [expandingStepField, setExpandingStepField] = useState<'title' | 'description' | null>(null);
 
   const [{ isOver }, drop] = useDrop({
     accept: "component",
@@ -225,6 +326,40 @@ export default function TemplateStepComponent({
     setIsEditingTitle(false);
   };
 
+  const openStepExpansionModal = (field: 'title' | 'description') => {
+    setExpandingStepField(field);
+    setShowStepExpansionModal(true);
+  };
+
+  const handleStepExpansionSave = (text: string) => {
+    if (expandingStepField === 'title') {
+      setStepTitle(text);
+    } else if (expandingStepField === 'description') {
+      setStepDescription(text);
+    }
+    setShowStepExpansionModal(false);
+    setExpandingStepField(null);
+  };
+
+  const getStepExpansionModalData = () => {
+    if (!expandingStepField) return { text: '', title: '', placeholder: '' };
+    
+    const data = {
+      title: {
+        text: stepTitle,
+        title: '단계 제목 편집',
+        placeholder: '이 단계의 제목을 입력하세요...'
+      },
+      description: {
+        text: stepDescription,
+        title: '단계 설명 편집',
+        placeholder: '이 단계에 대한 상세한 설명을 작성하세요...\n\n학생들이 이 단계에서 무엇을 해야 하는지, 어떤 목표를 달성해야 하는지 명확하게 안내해주세요.'
+      }
+    };
+    
+    return data[expandingStepField];
+  };
+
   return (
     <Card className={`${isOver ? "ring-2 ring-blue-500" : ""}`}>
       <CardHeader>
@@ -232,16 +367,46 @@ export default function TemplateStepComponent({
           <div className="flex-1">
             {isEditingTitle ? (
               <div className="space-y-2">
-                <Input
-                  value={stepTitle}
-                  onChange={(e) => setStepTitle(e.target.value)}
-                  placeholder="단계 제목"
-                />
-                <Input
-                  value={stepDescription}
-                  onChange={(e) => setStepDescription(e.target.value)}
-                  placeholder="단계 설명 (선택사항)"
-                />
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">단계 제목</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={stepTitle}
+                      onChange={(e) => setStepTitle(e.target.value)}
+                      placeholder="단계 제목"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openStepExpansionModal('title')}
+                      title="확대하여 편집"
+                    >
+                      <Maximize2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">단계 설명 (선택사항)</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={stepDescription}
+                      onChange={(e) => setStepDescription(e.target.value)}
+                      placeholder="단계 설명"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openStepExpansionModal('description')}
+                      title="확대하여 편집"
+                    >
+                      <Maximize2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={handleSaveTitle}>
                     <Check className="h-3 w-3 mr-1" />
@@ -330,6 +495,20 @@ export default function TemplateStepComponent({
           </div>
         )}
       </CardContent>
+
+      {/* 단계 텍스트 확대 모달 */}
+      <TextExpansionModal
+        isOpen={showStepExpansionModal}
+        onClose={() => {
+          setShowStepExpansionModal(false);
+          setExpandingStepField(null);
+        }}
+        onSave={handleStepExpansionSave}
+        initialText={getStepExpansionModalData().text}
+        title={getStepExpansionModalData().title}
+        placeholder={getStepExpansionModalData().placeholder}
+        maxLength={expandingStepField === 'title' ? 100 : undefined}
+      />
     </Card>
   );
 }

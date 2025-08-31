@@ -41,6 +41,9 @@ interface StudentProject {
   classId: string;
   activityId?: string;
   updatedAt: string;
+  template?: {
+    title: string;
+  };
 }
 
 interface ClassInfo {
@@ -278,11 +281,9 @@ export default function ClassActivitiesPage({ params }: { params: Promise<{ id: 
                           )}
                         </div>
                         <div className="flex gap-2">
-                          {activity.isTeacherTemplate && (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              선생님 제공
-                            </Badge>
-                          )}
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            선생님 제공
+                          </Badge>
                         </div>
                       </div>
                     </CardHeader>
@@ -373,6 +374,64 @@ export default function ClassActivitiesPage({ params }: { params: Promise<{ id: 
           </CardContent>
         </Card>
 
+        {/* 내 전체 프로젝트 목록 */}
+        {studentProjects.length > 0 && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-purple-600" />
+                이 클래스에서 내가 작성한 모든 프로젝트 ({studentProjects.length}개)
+              </CardTitle>
+              <CardDescription>
+                현재 제공된 활동 외에도 이전에 작성한 프로젝트들을 확인할 수 있습니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {studentProjects
+                  .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                  .map((project) => (
+                    <div key={project.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{project.title}</h4>
+                          <p className="text-sm text-gray-600">템플릿: {project.template?.title || "알 수 없음"}</p>
+                          <p className="text-xs text-gray-500">
+                            수정일: {new Date(project.updatedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={project.status === "SUBMITTED" ? "default" : "secondary"}
+                            className={
+                              project.status === "SUBMITTED" 
+                                ? "bg-green-600" 
+                                : project.status === "COMPLETED"
+                                ? "bg-orange-600"
+                                : "bg-blue-100 text-blue-800"
+                            }
+                          >
+                            {project.status === "SUBMITTED" ? "제출완료" : 
+                             project.status === "COMPLETED" ? "완료" : 
+                             project.status === "IN_PROGRESS" ? "진행중" : "초안"}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => router.push(`/student/projects/${project.id}`)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            보기
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* 참고사항 */}
         <Card className="mt-8 bg-blue-50 border-blue-200">
           <CardContent className="p-4">
@@ -382,6 +441,7 @@ export default function ClassActivitiesPage({ params }: { params: Promise<{ id: 
               <li>• 입력 내용은 자동으로 저장되어 나중에 계속할 수 있습니다</li>
               <li>• 완료된 탐구는 교사의 피드백을 받을 수 있습니다</li>
               <li>• 마감일이 있는 활동은 기한 내에 완료해주세요</li>
+              <li>• 위의 "내가 작성한 모든 프로젝트" 섹션에서 이전 작업도 확인할 수 있습니다</li>
             </ul>
           </CardContent>
         </Card>

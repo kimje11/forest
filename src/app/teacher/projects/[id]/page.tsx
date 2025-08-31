@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import TextWithTables from "@/components/ui/text-with-tables";
+import MathEditor from "@/components/ui/math-editor";
 import { 
   Users, 
   BookOpen, 
@@ -37,6 +38,7 @@ interface ProjectInput {
     label: string;
     type: string;
     required: boolean;
+    placeholder?: string;
   };
 }
 
@@ -404,6 +406,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                           파일 보기
                                         </a>
                                       </div>
+                                    ) : component.type === 'TEXTAREA' && 
+                                      (component.placeholder?.includes("Math Editor") || 
+                                       component.placeholder?.includes("수학 수식, 표, 이미지")) ? (
+                                      <MathEditor
+                                        value={input?.value || ''}
+                                        onChange={() => {}} // 읽기 전용이므로 변경 불가
+                                        placeholder={component.placeholder || "내용이 없습니다."}
+                                        title={component.label}
+                                        readOnly={true}
+                                        className="bg-white"
+                                      />
                                     ) : (
                                       <TextWithTables>{input?.value || ''}</TextWithTables>
                                     )}

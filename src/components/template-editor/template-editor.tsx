@@ -133,6 +133,18 @@ export default function TemplateEditor({
   };
 
   const handleSave = () => {
+    // 제목 유효성 검사
+    if (!title.trim()) {
+      alert("템플릿 제목을 입력해주세요.");
+      return;
+    }
+    
+    // 단계 유효성 검사
+    if (steps.length === 0) {
+      alert("최소 하나의 단계를 추가해주세요.");
+      return;
+    }
+    
     const template = {
       title,
       description: description || undefined,
@@ -150,7 +162,7 @@ export default function TemplateEditor({
     onPreview(template);
   };
 
-  const canSave = title.trim() && steps.length > 0;
+  const canPreview = title.trim() && steps.length > 0;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -185,14 +197,13 @@ export default function TemplateEditor({
               <Button 
                 variant="outline" 
                 onClick={handlePreview}
-                disabled={!canSave}
+                disabled={!canPreview}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 미리보기
               </Button>
               <Button 
                 onClick={handleSave}
-                disabled={!canSave}
               >
                 <Save className="h-4 w-4 mr-2" />
                 저장
@@ -224,10 +235,10 @@ export default function TemplateEditor({
                   <CardContent className="p-12 text-center">
                     <Plus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      첫 번째 단계를 추가해보십시다
+                      첫 번째 단계를 추가해보세요
                     </h3>
                     <p className="text-gray-500 mb-4">
-                      탐구 활동의 첫 번째 단계를 만들어 학생들의 학습 여정을 시작해보십시다.
+                      탐구 활동의 첫 번째 단계를 만들어 학생들의 학습 여정을 시작해보세요.
                     </p>
                     <Button onClick={addStep}>
                       <Plus className="h-4 w-4 mr-2" />
@@ -264,7 +275,7 @@ export default function TemplateEditor({
                         </h4>
                         <p className="text-sm text-blue-700">
                           {steps.length}개의 단계와 {" "}
-                          {steps.reduce((total, step) => total + step.components.length, 0)}개의 컴포넌트가 구성되었습니다. 저장해보십시다.
+                          {steps.reduce((total, step) => total + step.components.length, 0)}개의 컴포넌트가 구성되었습니다. 저장해보세요.
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -272,6 +283,7 @@ export default function TemplateEditor({
                           variant="outline" 
                           size="sm"
                           onClick={handlePreview}
+                          disabled={!canPreview}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           미리보기

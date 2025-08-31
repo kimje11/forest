@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { BookOpen, Brain, Users, ArrowRight, Clock, Eye } from "lucide-react";
 import TopicSuggestion from "@/components/ai/topic-suggestion";
+import { safeUserName } from "@/utils/text-utils";
 
 interface Class {
   id: string;
@@ -153,7 +154,7 @@ export default function ExplorePage() {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">탐구 시작하기</h1>
-              <p className="text-gray-600">새로운 탐구 여정을 시작해보세요, {user?.name}님!</p>
+              <p className="text-gray-600">새로운 탐구 여정을 시작해보세요, {safeUserName(user?.name)}님!</p>
             </div>
             <div className="flex gap-4">
               <Button variant="outline" onClick={() => router.push("/student/dashboard")}>
