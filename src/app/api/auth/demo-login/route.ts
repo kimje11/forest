@@ -387,7 +387,6 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-
         role: user.role,
         password: user.password // 비밀번호는 해시화된 상태로 유지
       }
@@ -397,7 +396,24 @@ export async function POST(request: NextRequest) {
     const isProduction = process.env.NODE_ENV === 'production';
     const isVercel = process.env.VERCEL === '1';
     
-    console.log("Setting cookie with production settings:", isProduction, "Vercel:", isVercel);
+    console.log("Cookie settings - Production:", isProduction, "Vercel:", isVercel);
+    console.log("User data to store in cookie:", {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    });
+    
+    // Vercel 환경에서는 쿠키 설정을 더 안전하게
+    const cookieOptions = {
+      path: '/',
+      httpOnly: false, // 클라이언트에서 접근 가능하도록
+      secure: isProduction || isVercel, // Vercel에서는 HTTPS이므로 true
+      sameSite: 'lax' as const,
+      maxAge: 60 * 60 * 24 * 7 // 7일
+    };
+    
+    console.log("Cookie options:", cookieOptions);
     
     response.cookies.set('demoUser', JSON.stringify({
       id: user.id,
@@ -405,14 +421,9 @@ export async function POST(request: NextRequest) {
       name: user.name,
       role: user.role,
       password: user.password // 비밀번호도 포함하여 다음 로그인 시 사용
-    }), {
-      path: '/',
-      httpOnly: false, // 클라이언트에서 접근 가능하도록
-      secure: isProduction || isVercel, // Vercel에서는 HTTPS이므로 true
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7일
-    });
+    }), cookieOptions);
 
+    console.log("Cookie set successfully");
     return response;
 
   } catch (error) {

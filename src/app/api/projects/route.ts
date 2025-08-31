@@ -11,10 +11,17 @@ const createProjectSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("Projects API called");
+    console.log("Environment:", process.env.NODE_ENV);
+    console.log("VERCEL:", process.env.VERCEL);
+    console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
+    
     // 데모 계정을 포함한 인증
     const user = await requireAuthWithDemo(request);
+    console.log("Authenticated user:", user.email, user.role);
 
     if (!user) {
+      console.log("No user found");
       return NextResponse.json(
         { error: "로그인이 필요합니다." },
         { status: 401 }

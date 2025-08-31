@@ -75,17 +75,45 @@ export default function AuthProvider({
   // 사용자 상태를 체크하는 함수
   const checkUserStatus = async () => {
     console.log("Checking user status...");
+    console.log("Environment:", process.env.NODE_ENV);
+    console.log("VERCEL:", process.env.VERCEL);
     
-    // 1. 데모 사용자 확인
+    // Supabase 환경 변수 확인
+    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "설정됨" : "설정되지 않음");
+    console.log("Supabase Anon Key:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "설정됨" : "설정되지 않음");
+    
+    // 1. 데모 사용자 확인 (localStorage와 쿠키 모두 확인)
     const demoUser = localStorage.getItem('demoUser');
-    console.log("Demo user check:", demoUser ? "found" : "not found");
+    console.log("Demo user in localStorage:", demoUser ? "found" : "not found");
     
-    if (demoUser) {
+    // 쿠키에서도 데모 사용자 확인 (Vercel 환경에서 중요)
+    let demoUserFromCookie = null;
+    try {
+      const cookies = document.cookie.split(';');
+      const demoUserCookie = cookies.find(cookie => cookie.trim().startsWith('demoUser='));
+      if (demoUserCookie) {
+        const cookieValue = demoUserCookie.split('=')[1];
+        demoUserFromCookie = JSON.parse(decodeURIComponent(cookieValue));
+        console.log("Demo user in cookie:", demoUserFromCookie ? "found" : "not found");
+      }
+    } catch (e) {
+      console.log("Error parsing demo user cookie:", e);
+    }
+    
+    // localStorage나 쿠키에서 데모 사용자를 찾으면 설정
+    const finalDemoUser = demoUser ? JSON.parse(demoUser) : demoUserFromCookie;
+    
+    if (finalDemoUser) {
       try {
-        const demoUserData = JSON.parse(demoUser);
-        console.log("Setting demo user:", demoUserData.email);
-        setUser(demoUserData as any);
+        console.log("Setting demo user:", finalDemoUser.email);
+        setUser(finalDemoUser as any);
         setLoading(false);
+        setIsInitialized(true);
+        
+        // localStorage에 저장 (쿠키에서 가져온 경우)
+        if (!demoUser && demoUserFromCookie) {
+          localStorage.setItem('demoUser', JSON.stringify(demoUserFromCookie));
+        }
         return;
       } catch (e) {
         console.error("Error parsing demo user:", e);

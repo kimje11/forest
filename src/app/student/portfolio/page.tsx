@@ -1128,7 +1128,10 @@ export default function PortfolioPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => router.push(`/student/projects/${project.id}`)}
+                                  onClick={() => {
+                                    console.log("완료된 탐구 보기 버튼 클릭:", project.id, project.title);
+                                    router.push(`/student/projects/${project.id}`);
+                                  }}
                                   className="text-xs"
                                 >
                                   <Eye className="h-3 w-3 mr-1" />

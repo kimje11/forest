@@ -45,22 +45,28 @@ export async function middleware(request: NextRequest) {
     user = userResult.data.user
     
     // AuthSessionMissingError는 정상적인 상황이므로 무시
-    if (sessionResult.error && sessionResult.error.name === 'AuthSessionMissingError') {
-      console.log(`No session found in middleware for ${pathname} (normal for unauthenticated users)`)
-    } else if (sessionResult.error) {
-      console.error("Session error in middleware:", sessionResult.error)
-    }
-    
-    if (userResult.error && userResult.error.name === 'AuthSessionMissingError') {
-      console.log(`No user found in middleware for ${pathname} (normal for unauthenticated users)`)
-    } else if (userResult.error) {
-      console.error("User error in middleware:", userResult.error)
+    // API 경로가 아닌 경우에만 로그 출력
+    if (!pathname.startsWith('/api/')) {
+      if (sessionResult.error && sessionResult.error.name === 'AuthSessionMissingError') {
+        console.log(`No session found in middleware for ${pathname} (normal for unauthenticated users)`)
+      } else if (sessionResult.error) {
+        console.error("Session error in middleware:", sessionResult.error)
+      }
+      
+      if (userResult.error && userResult.error.name === 'AuthSessionMissingError') {
+        console.log(`No user found in middleware for ${pathname} (normal for unauthenticated users)`)
+      } else if (userResult.error) {
+        console.error("User error in middleware:", userResult.error)
+      }
     }
   } catch (error) {
-    console.error("Middleware auth error:", error)
-    // AuthSessionMissingError는 정상적인 상황이므로 무시
-    if (error instanceof Error && error.name === 'AuthSessionMissingError') {
-      console.log(`No session/user found in middleware for ${pathname} (normal for unauthenticated users)`)
+    // API 경로가 아닌 경우에만 로그 출력
+    if (!pathname.startsWith('/api/')) {
+      console.error("Middleware auth error:", error)
+      // AuthSessionMissingError는 정상적인 상황이므로 무시
+      if (error instanceof Error && error.name === 'AuthSessionMissingError') {
+        console.log(`No session/user found in middleware for ${pathname} (normal for unauthenticated users)`)
+      }
     }
   }
 

@@ -77,33 +77,46 @@ export async function requireAuth(allowedRoles?: string[]) {
 
 // 데모 계정 지원을 위한 새로운 함수
 export async function requireAuthWithDemo(request: any, allowedRoles?: string[]) {
+  console.log("requireAuthWithDemo called");
+  console.log("Environment:", process.env.NODE_ENV);
+  console.log("VERCEL:", process.env.VERCEL);
+  
   // 먼저 일반 인증 시도
   try {
     const user = await getCurrentUser();
     if (user) {
+      console.log("Supabase user found:", user.email);
       if (allowedRoles && !allowedRoles.includes(user.role)) {
         throw new Error("권한이 없습니다.");
       }
       return user;
     }
   } catch (error) {
-    // 일반 인증 실패 시 데모 계정 확인
+    console.log("Supabase auth failed, checking demo account");
   }
 
   // 데모 계정 확인
   const demoUserCookie = request.cookies.get('demoUser')?.value;
+  console.log("Demo user cookie:", demoUserCookie ? "found" : "not found");
+  
   if (demoUserCookie) {
     try {
       const demoUser = JSON.parse(demoUserCookie);
+      console.log("Demo user parsed:", demoUser.email);
+      
       if (allowedRoles && !allowedRoles.includes(demoUser.role)) {
+        console.log("Demo user role not allowed:", demoUser.role);
         throw new Error("권한이 없습니다.");
       }
+      
+      console.log("Returning demo user:", demoUser.email);
       return demoUser;
     } catch (e) {
-      // 데모 유저 파싱 실패
+      console.error("Demo user parsing error:", e);
     }
   }
 
+  console.log("No valid authentication found");
   throw new Error("인증이 필요합니다.");
 }
 
